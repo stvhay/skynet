@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/dev/.claude/plugins/cache/my-claude-plugins/dev-workflow-toolkit/1.8.0/scripts/quality-gate.sh --path ."
+          }
+        ]
+      }
+    ]
+  }
+}

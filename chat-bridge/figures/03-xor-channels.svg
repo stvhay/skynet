@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
+  <rect width="800" height="520" rx="12" fill="#0d1117"/>
+
+  <!-- The rule -->
+  <rect x="40" y="30" width="720" height="60" rx="10" fill="#1a1a2e" stroke="#e94560" stroke-width="1.5"/>
+  <text x="400" y="57" text-anchor="middle" fill="#e94560" font-family="monospace" font-size="14">channel_dir = XOR(sorted(participants))</text>
+  <text x="400" y="78" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="11">Commutative + Associative: any participant computes it in any order, same result</text>
+
+  <!-- Pair -->
+  <rect x="40" y="110" width="340" height="90" rx="10" fill="#161b22" stroke="#533483" stroke-width="1.5"/>
+  <text x="210" y="135" text-anchor="middle" fill="#533483" font-family="system-ui" font-size="12" font-weight="bold">Pair (k=2)</text>
+  <text x="210" y="158" text-anchor="middle" fill="#c9d1d9" font-family="monospace" font-size="11">a3f2 XOR b7c1 = 1433</text>
+  <text x="210" y="178" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="10">Both agents compute same dir independently</text>
+  <text x="210" y="193" text-anchor="middle" fill="#484f58" font-family="monospace" font-size="10">.mesh/channels/1433/</text>
+
+  <!-- Group -->
+  <rect x="420" y="110" width="340" height="90" rx="10" fill="#161b22" stroke="#2ea043" stroke-width="1.5"/>
+  <text x="590" y="135" text-anchor="middle" fill="#2ea043" font-family="system-ui" font-size="12" font-weight="bold">Group (k=3)</text>
+  <text x="590" y="158" text-anchor="middle" fill="#c9d1d9" font-family="monospace" font-size="11">a3f2 XOR b7c1 XOR d9e4 = cc17</text>
+  <text x="590" y="178" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="10">All three compute same dir independently</text>
+  <text x="590" y="193" text-anchor="middle" fill="#484f58" font-family="monospace" font-size="10">.mesh/channels/cc17/</text>
+
+  <!-- Filesystem layout -->
+  <rect x="40" y="220" width="340" height="280" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="210" y="245" text-anchor="middle" fill="#c9d1d9" font-family="system-ui" font-size="13" font-weight="bold">Filesystem Layout</text>
+  <line x1="55" y1="255" x2="365" y2="255" stroke="#30363d"/>
+
+  <text x="60" y="280" fill="#e94560" font-family="monospace" font-size="11">.mesh/</text>
+  <text x="80" y="300" fill="#2ea043" font-family="monospace" font-size="11">agents/</text>
+  <text x="100" y="318" fill="#8b949e" font-family="monospace" font-size="10">a3f2/status.json</text>
+  <text x="100" y="334" fill="#8b949e" font-family="monospace" font-size="10">b7c1/status.json</text>
+
+  <text x="80" y="358" fill="#533483" font-family="monospace" font-size="11">channels/</text>
+  <text x="100" y="378" fill="#e94560" font-family="monospace" font-size="10">1433/</text>
+  <text x="220" y="378" fill="#484f58" font-family="system-ui" font-size="9">XOR(a3f2, b7c1)</text>
+  <text x="120" y="396" fill="#484f58" font-family="monospace" font-size="10">attachments/</text>
+
+  <text x="100" y="418" fill="#e94560" font-family="monospace" font-size="10">cc17/</text>
+  <text x="220" y="418" fill="#484f58" font-family="system-ui" font-size="9">XOR(a3f2, b7c1, d9e4)</text>
+  <text x="120" y="436" fill="#484f58" font-family="monospace" font-size="10">attachments/</text>
+
+  <text x="100" y="458" fill="#e94560" font-family="monospace" font-size="10">all/</text>
+  <text x="220" y="458" fill="#484f58" font-family="system-ui" font-size="9">well-known broadcast</text>
+  <text x="120" y="476" fill="#484f58" font-family="monospace" font-size="10">attachments/</text>
+
+  <!-- Properties -->
+  <rect x="420" y="220" width="340" height="140" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="590" y="245" text-anchor="middle" fill="#c9d1d9" font-family="system-ui" font-size="13" font-weight="bold">Properties</text>
+  <line x1="435" y1="255" x2="745" y2="255" stroke="#30363d"/>
+
+  <circle cx="445" cy="278" r="4" fill="#2ea043"/>
+  <text x="460" y="282" fill="#c9d1d9" font-family="system-ui" font-size="11">Symmetric: A XOR B = B XOR A</text>
+  <circle cx="445" cy="302" r="4" fill="#2ea043"/>
+  <text x="460" y="306" fill="#c9d1d9" font-family="system-ui" font-size="11">Deterministic: no coordination needed</text>
+  <circle cx="445" cy="326" r="4" fill="#2ea043"/>
+  <text x="460" y="330" fill="#c9d1d9" font-family="system-ui" font-size="11">Unique: UUIDs guarantee no collisions</text>
+  <circle cx="445" cy="350" r="4" fill="#2ea043"/>
+  <text x="460" y="354" fill="#c9d1d9" font-family="system-ui" font-size="11">The access list IS the address</text>
+
+  <!-- "all" channel note -->
+  <rect x="420" y="380" width="340" height="120" rx="10" fill="#161b22" stroke="#e94560" stroke-width="1"/>
+  <text x="590" y="405" text-anchor="middle" fill="#e94560" font-family="system-ui" font-size="12" font-weight="bold">The "all" Channel</text>
+  <line x1="435" y1="415" x2="745" y2="415" stroke="#30363d"/>
+  <text x="440" y="438" fill="#c9d1d9" font-family="system-ui" font-size="10">Not a computed XOR — well-known path.</text>
+  <text x="440" y="458" fill="#c9d1d9" font-family="system-ui" font-size="10">Persistent: new agents can read history.</text>
+  <text x="440" y="478" fill="#c9d1d9" font-family="system-ui" font-size="10">Public: no UUID knowledge required.</text>
+  <text x="440" y="498" fill="#484f58" font-family="system-ui" font-size="10">Used for mesh-wide announcements.</text>
+</svg>

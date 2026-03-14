@@ -1,0 +1,27 @@
+# Nix / direnv
+.direnv/
+result
+
+# Local environment overrides
+.envrc.local.d/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Mesh runtime
+.mesh/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
