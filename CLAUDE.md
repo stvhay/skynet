@@ -25,8 +25,13 @@ This project uses Nix flakes + direnv for reproducible environments:
 
 - `flake.nix` — Dev tooling (Python, linters, etc.)
 - `.envrc` — Loads flake and sources `.envrc.d/` and `.envrc.local.d/`
-- `.envrc.d/` — Tracked initialization scripts (committed)
-- `.envrc.local.d/` — Local-only initialization scripts (gitignored)
+- `.envrc.d/` — Tracked initialization scripts (beads, dolt auto-install)
+- `.envrc.local.d/` — Local-only initialization scripts (gitignored, e.g. Langfuse keys)
+
+### Tools
+
+- **beads** (`bd`) — Used for context management. Auto-installed via `.envrc.d/beads.sh`.
+- **dolt** — Version-controlled database. Auto-installed via `.envrc.d/dolt.sh`.
 
 ```bash
 direnv allow    # Load environment
