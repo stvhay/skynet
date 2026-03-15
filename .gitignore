@@ -32,3 +32,4 @@ Thumbs.db
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+.issue

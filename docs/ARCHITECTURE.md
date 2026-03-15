@@ -71,7 +71,7 @@ Each agent receives a bearer token at spawn time, generated from 256 bits of cry
 
 ```json
 {
-  "scheme": "scrypt-v1",
+  "scheme": "scrypt",
   "salt": "<hex>",
   "hash": "<hex>",
   "n": 16384,
@@ -128,4 +128,4 @@ A Python script, Node.js process, or any other MCP-capable client can participat
 
 - [Design Document](DESIGN.md) — Protocol specification, tool API, message schema
 - [Server Spec](../mesh-server/SPEC.md) — Invariants, failure modes, integration contract
-- [Contributing](../CONTRIBUTING.md) — Development workflow
+- [Workflow](../CLAUDE.md#workflow) — Development process

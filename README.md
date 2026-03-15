@@ -80,4 +80,4 @@ ruff format --check .
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
+See the [Workflow section in CLAUDE.md](CLAUDE.md#workflow) for the development process.
