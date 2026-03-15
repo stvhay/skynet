@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -59,7 +60,7 @@ class EventStore:
             try:
                 queue.put_nowait(event)
             except asyncio.QueueFull:
-                pass  # Skip full queues — don't block the event path
+                logging.warning("Event subscriber queue full — event dropped")
 
     def replay(self) -> list[Event]:
         """Replay all events from the log. Skips incomplete trailing lines."""

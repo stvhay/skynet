@@ -134,6 +134,13 @@ def test_fail5_invalid_model(state, store, tmp_path):
     assert "model" in result["error"].lower()
 
 
+def test_fail6_invalid_thinking_budget(tmp_path, store, state):
+    """thinking_budget below minimum is rejected."""
+    result = prepare_spawn(state, store, mesh_dir=tmp_path, thinking_budget=100)
+    assert result["code"] == "invalid_args"
+    assert "1024" in result["error"]
+
+
 def test_inv20_spawn_returns_agent_dir(state, store, tmp_path):
     """INV-20: spawn result includes agent_dir path."""
     result = prepare_spawn(state, store, mesh_dir=tmp_path / ".mesh")

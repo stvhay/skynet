@@ -56,6 +56,7 @@ Event-sourced MCP server for message-passing between agent instances. Singleton 
 - **FAIL-3**: shutdown marks agent dead and emits AgentDeregistered
 - **FAIL-4**: Duplicate UUID registration (astronomically unlikely with UUIDv4)
 - **FAIL-5**: Invalid model string returns error
+- **FAIL-6**: Invalid thinking_budget (< 1024) returns error
 
 ## Event Model
 

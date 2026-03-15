@@ -48,6 +48,14 @@ def prepare_spawn(
             "error": f"Invalid model '{model}'. Valid models: {valid}",
         }
 
+    # Validate thinking_budget
+    if thinking_budget is not None and thinking_budget < 1024:
+        return {
+            "code": "invalid_args",
+            "data": {},
+            "error": f"thinking_budget must be >= 1024, got {thinking_budget}",
+        }
+
     agent_uuid = generate_agent_uuid()
     raw_token = generate_token()
     token_hash = hash_token(raw_token)
