@@ -87,6 +87,8 @@ tool_input = data.get('tool_input', {{}})
 tool_input['caller_uuid'] = '{agent_uuid}'
 print(json.dumps({{'decision': 'allow', 'updatedInput': tool_input}}))
 "
+else
+    echo '{{"hookSpecificOutput": {{"hookEventName": "PreToolUse", "permissionDecision": "allow"}}}}'
 fi
 """
 
@@ -96,24 +98,16 @@ def generate_stop_hook(agent_uuid: str, server_base_url: str) -> str:
 
     INV-6: Calls shutdown endpoint on agent stop.
     """
-    shutdown_url = f"{server_base_url}/api/agents/{agent_uuid}/shutdown"
     return f"""#!/usr/bin/env bash
 # Stop hook — clean shutdown for agent {agent_uuid}
+input=$(cat -)
+stop_hook_active=$(echo "$input" | jq -r '.stop_hook_active // false')
 
-# Read the hook input from stdin
-input=$(cat)
-
-# Check if stop_hook_active flag is set (prevent recursive calls)
-stop_hook_active=$(echo "$input" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stop_hook_active', False))" 2>/dev/null)
-
-if [[ "$stop_hook_active" != "True" ]]; then
-    # Call shutdown endpoint
-    curl -s -X POST "{shutdown_url}" \\
-        -H "Authorization: Bearer $MESH_BEARER_TOKEN" \\
-        -H "X-Agent-ID: {agent_uuid}" \\
-        -H "Content-Type: application/json" \\
-        > /dev/null 2>&1 || true
+if [[ "$stop_hook_active" == "true" ]]; then
+    exit 0
 fi
+
+curl -s -X POST "{server_base_url}/api/agents/{agent_uuid}/shutdown" >/dev/null 2>&1 || true
 """
 
 
@@ -127,7 +121,7 @@ def generate_claude_md(role: str | None) -> str:
     return f"# Agent Role\n\n{role}\n"
 
 
-def generate_settings_json(agent_uuid: str, hooks_dir: str) -> dict:
+def generate_settings_json(hooks_dir: str) -> dict:
     """Generate settings.json with all three hooks configured.
 
     INV-7: Settings configures SessionStart, PreToolUse, and Stop hooks.
@@ -207,7 +201,7 @@ def write_agent_configs(
 
     # Settings JSON
     settings_path = os.path.join(agent_dir, "settings.json")
-    settings = generate_settings_json(agent_uuid, hooks_dir)
+    settings = generate_settings_json(hooks_dir)
     with open(settings_path, "w") as f:
         json.dump(settings, f, indent=2)
 

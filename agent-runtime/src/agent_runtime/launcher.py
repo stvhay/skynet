@@ -21,8 +21,6 @@ class AgentProcess:
     ):
         if not model:
             raise ValueError("model must be a non-empty string")
-        if model is None:
-            raise ValueError("model must not be None")
 
         self._uuid = uuid
         self._model = model
@@ -170,7 +168,7 @@ class AgentSupervisor:
             return
 
         # Wait for exit in a thread to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         exit_code = await loop.run_in_executor(None, process.wait)
 
         # Clean up

@@ -40,7 +40,7 @@ class TestInv4ModelToCliArgs:
         )
         args = proc._build_cli_args()
 
-        assert "claude" in args[0]
+        assert args[0] == "claude"
         assert "--model" in args
         model_idx = args.index("--model")
         assert args[model_idx + 1] == "sonnet"

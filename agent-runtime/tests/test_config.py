@@ -108,7 +108,7 @@ class TestInv7SettingsJson:
 
     def test_inv7_settings_json(self):
         hooks_dir = "/tmp/test-hooks"
-        settings = generate_settings_json(AGENT_UUID, hooks_dir)
+        settings = generate_settings_json(hooks_dir)
 
         assert "hooks" in settings
         hooks = settings["hooks"]
