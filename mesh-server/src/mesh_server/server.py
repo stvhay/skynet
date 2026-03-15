@@ -1,0 +1,144 @@
+"""MCP server setup with FastMCP, streamable-HTTP transport."""
+
+from __future__ import annotations
+
+import os
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from pathlib import Path
+
+from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.session import ServerSession
+
+from mesh_server.events import EventStore
+from mesh_server.projections import MeshState
+from mesh_server.tools import (
+    tool_read_inbox_async,
+    tool_send,
+    tool_show_neighbors,
+    tool_shutdown,
+    tool_whoami,
+)
+
+
+@dataclass
+class AppContext:
+    store: EventStore
+    state: MeshState
+    mesh_dir: Path
+
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP):
+    """Initialize event store and rebuild state from event log."""
+    mesh_dir = Path(os.environ.get("MESH_DIR", ".mesh"))
+    store = EventStore(mesh_dir / "events.jsonl")
+    state = MeshState()
+
+    # Replay events to rebuild state
+    for event in store.replay():
+        state.apply(event)
+
+    yield AppContext(store=store, state=state, mesh_dir=mesh_dir)
+
+
+mcp = FastMCP("mesh", lifespan=app_lifespan, json_response=True)
+
+Ctx = Context[ServerSession, AppContext]
+
+
+def _get_app(ctx: Ctx) -> AppContext:
+    return ctx.request_context.lifespan_context
+
+
+@mcp.tool()
+async def whoami(caller_uuid: str, ctx: Ctx) -> dict:
+    """Return your UUID and current neighbor count.
+
+    Args:
+        caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
+    """
+    app = _get_app(ctx)
+    return tool_whoami(app.state, caller_uuid=caller_uuid)
+
+
+@mcp.tool()
+async def send(
+    caller_uuid: str,
+    to: str,
+    ctx: Ctx,
+    message: str | None = None,
+    command: str | None = None,
+) -> dict:
+    """Send a message to another agent or broadcast.
+
+    Args:
+        caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
+        to: Recipient UUID, or "00000000-0000-0000-0000-000000000000" for broadcast
+        message: Free-form message text
+        command: Optional structured command string
+    """
+    app = _get_app(ctx)
+    agent = app.state.get_agent(caller_uuid)
+    if not agent or not agent.alive:
+        return {"code": "unauthorized", "data": {}, "error": "Agent not registered"}
+    return tool_send(
+        app.state,
+        app.store,
+        caller_uuid=caller_uuid,
+        to=to,
+        message=message,
+        command=command,
+    )
+
+
+@mcp.tool()
+async def read_inbox(
+    caller_uuid: str,
+    ctx: Ctx,
+    block: bool = False,
+) -> dict:
+    """Read and drain your inbox.
+
+    Args:
+        caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
+        block: If true, wait indefinitely until a message arrives (yield/idle)
+    """
+    app = _get_app(ctx)
+    return await tool_read_inbox_async(
+        app.state,
+        app.store,
+        caller_uuid=caller_uuid,
+        block=block,
+    )
+
+
+@mcp.tool()
+async def show_neighbors(caller_uuid: str, ctx: Ctx) -> dict:
+    """List all registered agents with their status.
+
+    Args:
+        caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
+    """
+    app = _get_app(ctx)
+    return tool_show_neighbors(app.state, caller_uuid=caller_uuid)
+
+
+@mcp.tool()
+async def shutdown(caller_uuid: str, ctx: Ctx) -> dict:
+    """Self-terminate. Deregisters from the mesh and stops this agent.
+
+    Args:
+        caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
+    """
+    app = _get_app(ctx)
+    return tool_shutdown(app.state, app.store, caller_uuid=caller_uuid)
+
+
+def run_server(host: str = "0.0.0.0", port: int = 9090) -> None:
+    """Start the MCP mesh server."""
+    mcp.run(transport="streamable-http", host=host, port=port)
+
+
+if __name__ == "__main__":
+    run_server()
