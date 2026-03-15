@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import json
 import os
@@ -24,10 +25,22 @@ _EVENT_TYPES: dict[str, type] = {
 
 
 class EventStore:
-    """Append-only JSONL event log with crash recovery."""
+    """Append-only JSONL event log with crash recovery and pub/sub."""
 
     def __init__(self, path: Path | str) -> None:
         self.path = Path(path)
+        self._subscribers: list[asyncio.Queue] = []
+
+    def subscribe(self, queue: asyncio.Queue) -> None:
+        """Register a queue to receive all future appended events."""
+        self._subscribers.append(queue)
+
+    def unsubscribe(self, queue: asyncio.Queue) -> None:
+        """Remove a queue from the subscriber list."""
+        try:
+            self._subscribers.remove(queue)
+        except ValueError:
+            pass
 
     def append(self, event: Event) -> None:
         """Append an event to the log. Write + flush + fsync for durability."""
@@ -40,6 +53,13 @@ class EventStore:
             os.fsync(fd)
         finally:
             os.close(fd)
+
+        # Notify subscribers (non-blocking)
+        for queue in self._subscribers:
+            try:
+                queue.put_nowait(event)
+            except asyncio.QueueFull:
+                pass  # Skip full queues — don't block the event path
 
     def replay(self) -> list[Event]:
         """Replay all events from the log. Skips incomplete trailing lines."""

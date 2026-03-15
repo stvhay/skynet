@@ -141,12 +141,16 @@ async def spawn_neighbor(
     caller_uuid: str,
     ctx: Ctx,
     claude_md: str | None = None,
+    model: str = "sonnet",
+    thinking_budget: int | None = None,
 ) -> dict:
     """Spawn a new agent in the mesh.
 
     Args:
         caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
         claude_md: Optional CLAUDE.md content defining the new agent's role
+        model: Model short name: "opus", "sonnet", or "haiku" (default: "sonnet")
+        thinking_budget: Optional thinking token budget (None = no extended thinking)
     """
     app = _get_app(ctx)
     result = prepare_spawn(
@@ -154,6 +158,8 @@ async def spawn_neighbor(
         app.store,
         mesh_dir=app.mesh_dir,
         claude_md=claude_md,
+        model=model,
+        thinking_budget=thinking_budget,
     )
     return result
 

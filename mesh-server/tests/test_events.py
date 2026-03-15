@@ -1,7 +1,7 @@
 """Tests for the event store."""
 
+import asyncio
 import json
-import os
 import time
 
 import pytest
@@ -19,7 +19,14 @@ def event_log(tmp_path):
 def _make_agent_registered(uuid: str = "aaaa-bbbb") -> AgentRegistered:
     return AgentRegistered(
         uuid=uuid,
-        token_hash={"scheme": "scrypt", "salt": "aa", "hash": "bb", "n": 16384, "r": 8, "p": 1},
+        token_hash={
+            "scheme": "scrypt",
+            "salt": "aa",
+            "hash": "bb",
+            "n": 16384,
+            "r": 8,
+            "p": 1,
+        },
         pid=1234,
         timestamp=time.time(),
     )
@@ -105,3 +112,97 @@ def test_replay_empty_log(event_log):
     """Replay on a nonexistent log returns empty list."""
     events = event_log.replay()
     assert events == []
+
+
+# --- Pub/Sub tests ---
+
+
+@pytest.mark.asyncio
+async def test_inv19_subscriber_receives_events(event_log):
+    """INV-19: A subscribed queue receives every appended event."""
+    queue: asyncio.Queue = asyncio.Queue()
+    event_log.subscribe(queue)
+
+    e1 = _make_agent_registered("sub-agent-1")
+    e2 = _make_message_enqueued("a", "b", "hi")
+    event_log.append(e1)
+    event_log.append(e2)
+
+    assert queue.qsize() == 2
+    got1 = queue.get_nowait()
+    got2 = queue.get_nowait()
+    assert got1.uuid == "sub-agent-1"
+    assert got2.message == "hi"
+
+    event_log.unsubscribe(queue)
+
+
+@pytest.mark.asyncio
+async def test_inv19_multiple_subscribers(event_log):
+    """INV-19: Multiple subscribers each receive all appended events."""
+    q1: asyncio.Queue = asyncio.Queue()
+    q2: asyncio.Queue = asyncio.Queue()
+    event_log.subscribe(q1)
+    event_log.subscribe(q2)
+
+    event = _make_agent_registered("multi-sub")
+    event_log.append(event)
+
+    assert q1.qsize() == 1
+    assert q2.qsize() == 1
+    assert q1.get_nowait().uuid == "multi-sub"
+    assert q2.get_nowait().uuid == "multi-sub"
+
+    event_log.unsubscribe(q1)
+    event_log.unsubscribe(q2)
+
+
+@pytest.mark.asyncio
+async def test_inv19_unsubscribe(event_log):
+    """INV-19: After unsubscribe, queue no longer receives events."""
+    queue: asyncio.Queue = asyncio.Queue()
+    event_log.subscribe(queue)
+
+    event_log.append(_make_agent_registered("before"))
+    assert queue.qsize() == 1
+
+    event_log.unsubscribe(queue)
+
+    event_log.append(_make_agent_registered("after"))
+    assert queue.qsize() == 1  # No new event delivered
+
+
+@pytest.mark.asyncio
+async def test_inv1_append_still_atomic(event_log):
+    """INV-1: Pub/sub does not break atomic append behavior."""
+    queue: asyncio.Queue = asyncio.Queue()
+    event_log.subscribe(queue)
+
+    event = _make_agent_registered("atomic-test")
+    event_log.append(event)
+
+    # File should still have exactly one valid JSON line
+    with open(event_log.path) as f:
+        lines = f.readlines()
+    assert len(lines) == 1
+    parsed = json.loads(lines[0])
+    assert parsed["uuid"] == "atomic-test"
+
+    # And subscriber got it
+    assert queue.qsize() == 1
+    event_log.unsubscribe(queue)
+
+
+@pytest.mark.asyncio
+async def test_inv19_full_queue_skipped(event_log):
+    """INV-19: If a subscriber queue is full, the event is skipped (no blocking)."""
+    queue: asyncio.Queue = asyncio.Queue(maxsize=1)
+    event_log.subscribe(queue)
+
+    event_log.append(_make_agent_registered("first"))
+    event_log.append(_make_agent_registered("second"))  # Should be skipped
+
+    assert queue.qsize() == 1
+    assert queue.get_nowait().uuid == "first"
+
+    event_log.unsubscribe(queue)
