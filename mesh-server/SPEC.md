@@ -66,6 +66,7 @@ Event-sourced MCP server for message-passing between agent instances. Singleton 
 - **INV-24**: POST /api/spawn registers agent and auto-sends initial_message
 - **INV-25**: POST /api/agents/{uuid}/shutdown deregisters agent
 - **INV-26**: GET /api/inbox returns controller's messages
+- **INV-27**: Spawn chain with mock agents completes end-to-end
 
 ## Failure Modes
 
