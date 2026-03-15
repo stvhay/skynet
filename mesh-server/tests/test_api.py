@@ -331,8 +331,9 @@ async def test_inv21_api_events_pubsub(store):
 
 
 async def test_index_page(client):
-    """GET / returns HTML placeholder."""
+    """GET / returns HTML controller UI."""
     resp = await client.get("/")
     assert resp.status_code == 200
     assert "text/html" in resp.headers["content-type"]
-    assert "MCP Mesh Controller" in resp.text
+    assert "MCP Mesh" in resp.text
+    assert "d3.v7" in resp.text

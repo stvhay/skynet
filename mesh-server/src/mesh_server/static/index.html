@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Mesh</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+  --bg-base: #0c0c0c;
+  --bg-surface: #141414;
+  --bg-elevated: #1e1e1e;
+  --border: #262626;
+  --text-primary: #e0e0e0;
+  --text-secondary: #888;
+  --text-muted: #555;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-blue: #3b82f6;
+  --font-ui: -apple-system, 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: auto 1fr 200px;
+  height: 100vh;
+  gap: 0;
+}
+
+header {
+  grid-column: 1 / -1;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-surface);
+}
+
+header h1 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+header .status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+header .status.connected { color: var(--accent-green); }
+header .status.disconnected { color: var(--accent-red); }
+
+#graph-container {
+  grid-column: 1;
+  grid-row: 2;
+  background: var(--bg-base);
+  position: relative;
+  overflow: hidden;
+}
+
+#graph-container svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#detail-panel {
+  grid-column: 1;
+  grid-row: 3;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#detail-panel .detail-header {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#detail-panel .detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.msg-row {
+  padding: 3px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  border-left: 2px solid transparent;
+}
+
+.msg-row.controller-msg {
+  border-left-color: var(--accent-blue);
+}
+
+.msg-row .msg-dir {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.msg-row .msg-ids {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.msg-row .msg-time {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.msg-row .msg-text {
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#sidebar {
+  grid-column: 2;
+  grid-row: 2 / 4;
+  border-left: 1px solid var(--border);
+  background: var(--bg-surface);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+
+select, input[type="text"], input[type="number"], textarea {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 3px;
+  outline: none;
+  margin-bottom: 6px;
+  resize: vertical;
+}
+
+select:focus, input:focus, textarea:focus {
+  border-color: var(--accent-blue);
+}
+
+textarea { min-height: 48px; }
+
+button {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 5px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  width: 100%;
+}
+
+button:hover { border-color: var(--text-secondary); }
+button:active { background: var(--border); }
+
+.form-group { margin-bottom: 2px; }
+
+/* SVG styles */
+.node-glow {
+  filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.4));
+}
+
+.link-line {
+  fill: none;
+  stroke: #444;
+  transition: stroke 200ms ease;
+}
+
+.link-line.pulse {
+  stroke: var(--accent-green);
+}
+
+.node-label {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  font-size: 11px;
+  fill: var(--text-secondary);
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.tooltip {
+  position: absolute;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 100;
+  white-space: pre-line;
+  display: none;
+}
+
+.detail-empty {
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>MCP Mesh</h1>
+    <span id="sse-status" class="status disconnected">disconnected</span>
+  </header>
+  <div id="graph-container"></div>
+  <div id="detail-panel">
+    <div class="detail-header" id="detail-title">Messages</div>
+    <div class="detail-body" id="detail-body">
+      <div class="detail-empty">Click a node or edge to view messages</div>
+    </div>
+  </div>
+  <div id="sidebar">
+    <div>
+      <div class="section-title">Spawn</div>
+      <div class="form-group">
+        <label>model</label>
+        <select id="spawn-model">
+          <option value="sonnet" selected>sonnet</option>
+          <option value="opus">opus</option>
+          <option value="haiku">haiku</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>thinking budget</label>
+        <input type="number" id="spawn-budget" placeholder="optional">
+      </div>
+      <div class="form-group">
+        <label>role</label>
+        <textarea id="spawn-role" placeholder="Agent role..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>initial message</label>
+        <textarea id="spawn-msg" placeholder="First task..."></textarea>
+      </div>
+      <button id="btn-spawn">spawn</button>
+    </div>
+    <div>
+      <div class="section-title">Send</div>
+      <div class="form-group">
+        <label>to</label>
+        <select id="agent-select">
+          <option value="" disabled selected>no agents</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>message</label>
+        <textarea id="send-msg" placeholder="Message..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>command</label>
+        <input type="text" id="send-cmd" placeholder="optional">
+      </div>
+      <button id="btn-send">send</button>
+    </div>
+  </div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // --- State ---
+  const CONTROLLER_ID = '__controller__';
+  const nodes = [];  // {id, uuid, label, alive, pid, isController}
+  const links = [];  // {source, target, count, lastDir, messages: []}
+  const allMessages = []; // all messages for lookup
+  const agentMap = new Map(); // uuid -> node
+  let selectedNode = null;
+  let selectedLink = null;
+
+  // --- Helpers ---
+  function shortId(uuid) {
+    if (uuid === CONTROLLER_ID) return 'you';
+    return uuid.substring(0, 4);
+  }
+
+  function isControllerUuid(uuid) {
+    return uuid.startsWith('ffffffff');
+  }
+
+  function nodeIdFor(uuid) {
+    return isControllerUuid(uuid) ? CONTROLLER_ID : uuid;
+  }
+
+  function formatTime(ts) {
+    const d = new Date(ts * 1000);
+    return d.toLocaleTimeString('en-GB', { hour12: false });
+  }
+
+  function findLink(a, b) {
+    return links.find(l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === a && tid === b) || (sid === b && tid === a);
+    });
+  }
+
+  // --- D3 Setup ---
+  const container = document.getElementById('graph-container');
+  const svg = d3.select(container).append('svg');
+  const tooltip = document.getElementById('tooltip');
+
+  // Arrow marker
+  const defs = svg.append('defs');
+  defs.append('marker')
+    .attr('id', 'arrow')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 24)
+    .attr('refY', 0)
+    .attr('markerWidth', 6)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-4L10,0L0,4')
+    .attr('fill', '#666');
+
+  // Glow filter
+  const filter = defs.append('filter').attr('id', 'glow');
+  filter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+  const merge = filter.append('feMerge');
+  merge.append('feMergeNode').attr('in', 'blur');
+  merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  const g = svg.append('g');
+  const linkGroup = g.append('g').attr('class', 'links');
+  const nodeGroup = g.append('g').attr('class', 'nodes');
+
+  // Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([0.3, 4])
+    .on('zoom', (e) => g.attr('transform', e.transform));
+  svg.call(zoom);
+
+  // Click background to deselect
+  svg.on('click', (e) => {
+    if (e.target === svg.node() || e.target === g.node()) {
+      clearSelection();
+    }
+  });
+
+  let width = container.clientWidth;
+  let height = container.clientHeight;
+
+  const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+    .force('charge', d3.forceManyBody().strength(-200))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .on('tick', ticked);
+
+  // Responsive
+  const ro = new ResizeObserver(() => {
+    width = container.clientWidth;
+    height = container.clientHeight;
+    simulation.force('center', d3.forceCenter(width / 2, height / 2));
+    simulation.alpha(0.1).restart();
+  });
+  ro.observe(container);
+
+  function ticked() {
+    linkGroup.selectAll('.link-line')
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+
+    nodeGroup.selectAll('.node-group')
+      .attr('transform', d => `translate(${d.x},${d.y})`);
+  }
+
+  function updateGraph() {
+    // --- Links ---
+    const linkSel = linkGroup.selectAll('.link-line')
+      .data(links, d => d.key);
+
+    linkSel.exit().remove();
+
+    const linkEnter = linkSel.enter()
+      .append('line')
+      .attr('class', 'link-line')
+      .attr('stroke-width', 1)
+      .style('cursor', 'pointer')
+      .on('click', (e, d) => {
+        e.stopPropagation();
+        selectLink(d);
+      });
+
+    linkSel.merge(linkEnter)
+      .attr('stroke-width', d => Math.min(1 + d.count * 0.5, 4))
+      .attr('marker-end', 'url(#arrow)');
+
+    // --- Nodes ---
+    const nodeSel = nodeGroup.selectAll('.node-group')
+      .data(nodes, d => d.id);
+
+    nodeSel.exit().remove();
+
+    const nodeEnter = nodeSel.enter()
+      .append('g')
+      .attr('class', 'node-group')
+      .style('cursor', 'pointer')
+      .call(d3.drag()
+        .on('start', dragStart)
+        .on('drag', dragging)
+        .on('end', dragEnd))
+      .on('click', (e, d) => {
+        e.stopPropagation();
+        selectNode(d);
+      })
+      .on('mouseenter', (e, d) => {
+        const lines = [`uuid: ${d.uuid}`];
+        if (d.pid != null) lines.push(`pid: ${d.pid}`);
+        if (!d.isController) lines.push(`alive: ${d.alive}`);
+        tooltip.textContent = lines.join('\n');
+        tooltip.style.display = 'block';
+      })
+      .on('mousemove', (e) => {
+        tooltip.style.left = (e.pageX + 12) + 'px';
+        tooltip.style.top = (e.pageY - 10) + 'px';
+      })
+      .on('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
+
+    // Circle
+    nodeEnter.append('circle')
+      .attr('r', 0)
+      .transition().duration(400)
+      .attr('r', d => d.isController ? 20 : 14);
+
+    // Label
+    nodeEnter.append('text')
+      .attr('class', 'node-label')
+      .attr('dy', d => (d.isController ? 20 : 14) + 14)
+      .text(d => d.label);
+
+    // Update existing + new
+    const merged = nodeSel.merge(nodeEnter);
+    merged.select('circle')
+      .attr('fill', d => {
+        if (d.isController) return 'var(--accent-blue)';
+        if (!d.alive) return 'none';
+        return 'var(--accent-green)';
+      })
+      .attr('stroke', d => {
+        if (!d.isController && !d.alive) return '#444';
+        return 'none';
+      })
+      .attr('stroke-width', d => (!d.isController && !d.alive) ? 1.5 : 0)
+      .attr('filter', d => (d.alive && !d.isController) ? 'url(#glow)' : 'none');
+
+    // Update simulation
+    simulation.nodes(nodes);
+    simulation.force('link').links(links);
+    simulation.alpha(0.3).restart();
+  }
+
+  function dragStart(event, d) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+
+  function dragging(event, d) {
+    d.fx = event.x;
+    d.fy = event.y;
+  }
+
+  function dragEnd(event, d) {
+    if (!event.active) simulation.alphaTarget(0);
+    if (!d.isController) {
+      d.fx = null;
+      d.fy = null;
+    }
+  }
+
+  // --- Selection ---
+  function clearSelection() {
+    selectedNode = null;
+    selectedLink = null;
+    document.getElementById('detail-title').textContent = 'Messages';
+    document.getElementById('detail-body').innerHTML =
+      '<div class="detail-empty">Click a node or edge to view messages</div>';
+  }
+
+  function selectNode(d) {
+    selectedNode = d;
+    selectedLink = null;
+    const label = d.isController ? 'you' : shortId(d.id);
+    document.getElementById('detail-title').textContent = `Messages: ${label}`;
+    renderMessages();
+  }
+
+  function selectLink(d) {
+    selectedLink = d;
+    selectedNode = null;
+    const a = shortId(typeof d.source === 'object' ? d.source.id : d.source);
+    const b = shortId(typeof d.target === 'object' ? d.target.id : d.target);
+    document.getElementById('detail-title').textContent = `Messages: ${a} \u2194 ${b}`;
+    renderMessages();
+  }
+
+  function renderMessages() {
+    const body = document.getElementById('detail-body');
+    let msgs = [];
+
+    if (selectedNode) {
+      const nid = selectedNode.id;
+      msgs = allMessages.filter(m =>
+        nodeIdFor(m.from_uuid) === nid || nodeIdFor(m.to_uuid) === nid
+      );
+    } else if (selectedLink) {
+      const sid = typeof selectedLink.source === 'object' ? selectedLink.source.id : selectedLink.source;
+      const tid = typeof selectedLink.target === 'object' ? selectedLink.target.id : selectedLink.target;
+      msgs = allMessages.filter(m => {
+        const f = nodeIdFor(m.from_uuid);
+        const t = nodeIdFor(m.to_uuid);
+        return (f === sid && t === tid) || (f === tid && t === sid);
+      });
+    }
+
+    if (msgs.length === 0) {
+      body.innerHTML = '<div class="detail-empty">No messages</div>';
+      return;
+    }
+
+    msgs.sort((a, b) => a.timestamp - b.timestamp);
+    body.innerHTML = msgs.map(m => {
+      const fromId = shortId(nodeIdFor(m.from_uuid));
+      const toId = shortId(nodeIdFor(m.to_uuid));
+      const isCtrl = isControllerUuid(m.from_uuid) || isControllerUuid(m.to_uuid);
+      const text = m.message || m.command || '';
+      return `<div class="msg-row${isCtrl ? ' controller-msg' : ''}">
+        <span class="msg-dir">\u2192</span>
+        <span class="msg-ids">${fromId} \u2192 ${toId}</span>
+        <span class="msg-time">${formatTime(m.timestamp)}</span>
+        <span class="msg-text">${escapeHtml(text)}</span>
+      </div>`;
+    }).join('');
+
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  // --- Agent management ---
+  function addAgent(uuid, alive, pid) {
+    const nid = nodeIdFor(uuid);
+    if (agentMap.has(nid)) {
+      const existing = agentMap.get(nid);
+      existing.alive = alive;
+      existing.pid = pid;
+      return;
+    }
+    const node = {
+      id: nid,
+      uuid: uuid,
+      label: shortId(nid),
+      alive: alive,
+      pid: pid,
+      isController: nid === CONTROLLER_ID
+    };
+    nodes.push(node);
+    agentMap.set(nid, node);
+    updateAgentSelect();
+  }
+
+  function killAgent(uuid) {
+    const nid = nodeIdFor(uuid);
+    const node = agentMap.get(nid);
+    if (node) {
+      node.alive = false;
+      // Remove from force (fix in place)
+      node.fx = node.x;
+      node.fy = node.y;
+    }
+    updateAgentSelect();
+  }
+
+  function addMessage(msg) {
+    allMessages.push(msg);
+    const fromId = nodeIdFor(msg.from_uuid);
+    const toId = nodeIdFor(msg.to_uuid);
+
+    // Ensure nodes exist
+    if (!agentMap.has(fromId)) addAgent(msg.from_uuid, true, null);
+    if (!agentMap.has(toId)) addAgent(msg.to_uuid, true, null);
+
+    // Find or create link
+    let link = findLink(fromId, toId);
+    if (!link) {
+      const key = [fromId, toId].sort().join('--');
+      link = { source: fromId, target: toId, count: 0, lastDir: null, messages: [], key: key };
+      links.push(link);
+    }
+    link.count++;
+    link.lastDir = { from: fromId, to: toId };
+    link.messages.push(msg);
+
+    updateGraph();
+    pulseLink(link);
+
+    if (selectedNode || selectedLink) renderMessages();
+  }
+
+  function pulseLink(link) {
+    const sid = typeof link.source === 'object' ? link.source.id : link.source;
+    const tid = typeof link.target === 'object' ? link.target.id : link.target;
+    linkGroup.selectAll('.link-line')
+      .filter(d => {
+        const ds = typeof d.source === 'object' ? d.source.id : d.source;
+        const dt = typeof d.target === 'object' ? d.target.id : d.target;
+        return (ds === sid && dt === tid) || (ds === tid && dt === sid);
+      })
+      .classed('pulse', true)
+      .transition().duration(200)
+      .on('end', function() { d3.select(this).classed('pulse', false); });
+  }
+
+  function updateAgentSelect() {
+    const sel = document.getElementById('agent-select');
+    const prev = sel.value;
+    sel.innerHTML = '';
+    const alive = nodes.filter(n => !n.isController && n.alive);
+    if (alive.length === 0) {
+      sel.innerHTML = '<option value="" disabled selected>no agents</option>';
+      return;
+    }
+    alive.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n.uuid;
+      opt.textContent = shortId(n.id);
+      sel.appendChild(opt);
+    });
+    if (prev && alive.some(n => n.uuid === prev)) {
+      sel.value = prev;
+    }
+  }
+
+  // --- SSE ---
+  function connectSSE() {
+    const status = document.getElementById('sse-status');
+    const sse = new EventSource('/api/events');
+
+    sse.onopen = () => {
+      status.textContent = 'connected';
+      status.className = 'status connected';
+    };
+
+    sse.onerror = () => {
+      status.textContent = 'disconnected';
+      status.className = 'status disconnected';
+    };
+
+    sse.onmessage = (e) => {
+      const event = JSON.parse(e.data);
+      handleEvent(event);
+    };
+  }
+
+  function handleEvent(event) {
+    switch (event.type) {
+      case 'AgentRegistered':
+        addAgent(event.uuid, true, event.pid);
+        updateGraph();
+        break;
+      case 'AgentDeregistered':
+        killAgent(event.uuid);
+        updateGraph();
+        break;
+      case 'MessageEnqueued':
+        addMessage(event);
+        break;
+      case 'MessageDrained':
+        // UI doesn't need drain events
+        break;
+    }
+  }
+
+  // --- Forms ---
+  document.getElementById('btn-spawn').addEventListener('click', async () => {
+    const model = document.getElementById('spawn-model').value;
+    const budget = document.getElementById('spawn-budget').value;
+    const role = document.getElementById('spawn-role').value;
+    const msg = document.getElementById('spawn-msg').value;
+
+    const body = { model };
+    if (budget) body.thinking_budget = parseInt(budget, 10);
+    if (role) body.claude_md = role;
+    if (msg) body.initial_message = msg;
+
+    try {
+      await fetch('/api/spawn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      document.getElementById('spawn-role').value = '';
+      document.getElementById('spawn-msg').value = '';
+      document.getElementById('spawn-budget').value = '';
+    } catch (err) {
+      console.error('Spawn failed:', err);
+    }
+  });
+
+  document.getElementById('btn-send').addEventListener('click', async () => {
+    const to = document.getElementById('agent-select').value;
+    const message = document.getElementById('send-msg').value;
+    const command = document.getElementById('send-cmd').value;
+
+    if (!to) return;
+
+    const body = { to };
+    if (message) body.message = message;
+    if (command) body.command = command;
+
+    try {
+      await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      document.getElementById('send-msg').value = '';
+      document.getElementById('send-cmd').value = '';
+    } catch (err) {
+      console.error('Send failed:', err);
+    }
+  });
+
+  // --- Init ---
+  async function init() {
+    // Add controller node
+    const ctrlNode = {
+      id: CONTROLLER_ID,
+      uuid: CONTROLLER_ID,
+      label: 'you',
+      alive: true,
+      pid: null,
+      isController: true,
+      fx: width / 2,
+      fy: height * 0.25
+    };
+    nodes.push(ctrlNode);
+    agentMap.set(CONTROLLER_ID, ctrlNode);
+
+    // Fetch initial agents
+    try {
+      const res = await fetch('/api/agents');
+      const json = await res.json();
+      const agents = json.data?.neighbors || json.agents || [];
+      agents.forEach(a => addAgent(a.uuid, a.alive, a.pid));
+    } catch (err) {
+      console.error('Failed to fetch agents:', err);
+    }
+
+    updateGraph();
+    connectSSE();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

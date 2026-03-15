@@ -178,9 +178,11 @@ def create_api_routes(
         return JSONResponse(result)
 
     async def index(request: Request) -> Response:
-        """Serve placeholder index page."""
+        """Serve controller UI from static/index.html."""
+        static_dir = Path(__file__).parent / "static"
+        index_file = static_dir / "index.html"
         return Response(
-            content="<html><body><h1>MCP Mesh Controller</h1></body></html>",
+            content=index_file.read_text(),
             media_type="text/html",
         )
 
