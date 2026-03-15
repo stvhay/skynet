@@ -21,6 +21,7 @@
               uv
               python313
               ruff
+              gh
             ];
             shellHook = ''
               true
