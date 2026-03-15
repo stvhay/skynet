@@ -40,13 +40,13 @@ direnv allow    # Load environment
 ### Build
 
 ```bash
-# TBD — finalize during brainstorming
+cd mesh-server && uv sync
 ```
 
 ### Test
 
 ```bash
-# TBD — finalize during brainstorming
+cd mesh-server && uv run pytest
 ```
 
 ### Lint
@@ -80,3 +80,7 @@ All changes follow the dev-workflow-toolkit process:
 - `chat-bridge/` — Preliminary design document and prototypes
 - `docs/plans/` — Implementation plans
 - `.github/` — Issue and PR templates
+- `README.md` — Project overview and quick start
+- `docs/DESIGN.md` — Protocol specification
+- `docs/ARCHITECTURE.md` — System structure and decisions
+- `docs/images/` — Diagrams and generated graphics

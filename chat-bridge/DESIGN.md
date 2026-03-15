@@ -1,3 +1,5 @@
+> **Note:** This is the original design document. The current version lives at [docs/DESIGN.md](../docs/DESIGN.md).
+
 # MCP Mesh — Design Document
 
 ## Vision

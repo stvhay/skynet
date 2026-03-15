@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b949e"/>
+    </marker>
+    <marker id="arrow-r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e94560"/>
+    </marker>
+    <marker id="arrow-g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2ea043"/>
+    </marker>
+  </defs>
+
+  <rect width="800" height="520" rx="12" fill="#0d1117"/>
+
+  <!-- MCP Server (center) -->
+  <rect x="220" y="200" width="360" height="160" rx="10" fill="#1a1a2e" stroke="#e94560" stroke-width="2"/>
+  <text x="400" y="228" text-anchor="middle" fill="#e94560" font-family="system-ui" font-size="15" font-weight="bold">MCP Server (Singleton)</text>
+  <line x1="240" y1="240" x2="560" y2="240" stroke="#30363d"/>
+
+  <text x="250" y="263" fill="#c9d1d9" font-family="monospace" font-size="11">1. read_inbox(block?)</text>
+  <text x="250" y="281" fill="#c9d1d9" font-family="monospace" font-size="11">2. send(to, msg, cmd?, attach?)</text>
+  <text x="250" y="299" fill="#c9d1d9" font-family="monospace" font-size="11">3. spawn_neighbor(claude_md?)</text>
+  <text x="250" y="317" fill="#c9d1d9" font-family="monospace" font-size="11">4. show_neighbors()</text>
+  <text x="250" y="335" fill="#c9d1d9" font-family="monospace" font-size="11">5. shutdown()</text>
+
+  <!-- Internal state -->
+  <rect x="580" y="200" width="170" height="120" rx="8" fill="#161b22" stroke="#30363d"/>
+  <text x="665" y="222" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="11">Inbox Queues</text>
+  <text x="595" y="245" fill="#484f58" font-family="monospace" font-size="10">a3f2 → [msg, msg]</text>
+  <text x="595" y="263" fill="#484f58" font-family="monospace" font-size="10">b7c1 → [msg]</text>
+  <text x="595" y="281" fill="#484f58" font-family="monospace" font-size="10">d9e4 → []</text>
+  <text x="595" y="299" fill="#484f58" font-family="monospace" font-size="10">ctrl → [msg]</text>
+
+  <!-- Claude A -->
+  <rect x="40" y="40" width="180" height="100" rx="10" fill="#161b22" stroke="#533483" stroke-width="2"/>
+  <text x="130" y="68" text-anchor="middle" fill="#c9d1d9" font-family="system-ui" font-size="13" font-weight="bold">Claude A</text>
+  <text x="130" y="88" text-anchor="middle" fill="#484f58" font-family="monospace" font-size="10">uuid: a3f2</text>
+  <text x="130" y="108" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="10">PID 4821</text>
+  <text x="130" y="128" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="10">CLAUDE.md → use MCP</text>
+
+  <!-- Claude B -->
+  <rect x="580" y="40" width="180" height="100" rx="10" fill="#161b22" stroke="#533483" stroke-width="2"/>
+  <text x="670" y="68" text-anchor="middle" fill="#c9d1d9" font-family="system-ui" font-size="13" font-weight="bold">Claude B</text>
+  <text x="670" y="88" text-anchor="middle" fill="#484f58" font-family="monospace" font-size="10">uuid: b7c1</text>
+  <text x="670" y="108" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="10">PID 4835</text>
+  <text x="670" y="128" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="10">CLAUDE.md → use MCP</text>
+
+  <!-- Claude C -->
+  <rect x="40" y="400" width="180" height="90" rx="10" fill="#161b22" stroke="#533483" stroke-width="2"/>
+  <text x="130" y="428" text-anchor="middle" fill="#c9d1d9" font-family="system-ui" font-size="13" font-weight="bold">Claude C</text>
+  <text x="130" y="448" text-anchor="middle" fill="#484f58" font-family="monospace" font-size="10">uuid: d9e4</text>
+  <text x="130" y="468" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="10">PID 4902</text>
+
+  <!-- Controller -->
+  <rect x="580" y="400" width="180" height="90" rx="10" fill="#161b22" stroke="#e94560" stroke-width="2"/>
+  <text x="670" y="428" text-anchor="middle" fill="#e94560" font-family="system-ui" font-size="13" font-weight="bold">Controller (User)</text>
+  <text x="670" y="448" text-anchor="middle" fill="#484f58" font-family="monospace" font-size="10">addr: controller</text>
+  <text x="670" y="468" text-anchor="middle" fill="#484f58" font-family="system-ui" font-size="10">Web UI • traffic tap</text>
+
+  <!-- Connections -->
+  <line x1="195" y1="140" x2="280" y2="210" stroke="#533483" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="605" y1="140" x2="520" y2="210" stroke="#533483" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="195" y1="400" x2="280" y2="350" stroke="#533483" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="605" y1="400" x2="520" y2="350" stroke="#e94560" stroke-width="1.5" marker-end="url(#arrow-r)"/>
+
+  <text x="210" y="168" fill="#8b949e" font-family="system-ui" font-size="10">MCP tools</text>
+  <text x="540" y="168" fill="#8b949e" font-family="system-ui" font-size="10">MCP tools</text>
+  <text x="210" y="388" fill="#8b949e" font-family="system-ui" font-size="10">MCP tools</text>
+  <text x="530" y="388" fill="#e94560" font-family="system-ui" font-size="10">GET/POST/WS</text>
+
+  <!-- Legend -->
+  <rect x="40" y="260" width="160" height="90" rx="8" fill="#161b22" stroke="#30363d"/>
+  <text x="55" y="282" fill="#8b949e" font-family="system-ui" font-size="10" font-weight="bold">Communication</text>
+  <text x="55" y="300" fill="#533483" font-family="system-ui" font-size="10">Agent ↔ Agent: send/inbox</text>
+  <text x="55" y="316" fill="#e94560" font-family="system-ui" font-size="10">Agent ↔ Controller: send/inbox</text>
+  <text x="55" y="332" fill="#2ea043" font-family="system-ui" font-size="10">Controller: +tap, +kill</text>
+</svg>

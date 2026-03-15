@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 650">
+  <rect width="800" height="650" rx="12" fill="#0d1117"/>
+
+  <!-- Message Envelope -->
+  <rect x="40" y="30" width="350" height="380" rx="10" fill="#161b22" stroke="#533483" stroke-width="2"/>
+  <text x="215" y="55" text-anchor="middle" fill="#c9d1d9" font-family="system-ui" font-size="14" font-weight="bold">Message Envelope</text>
+  <line x1="55" y1="65" x2="375" y2="65" stroke="#30363d"/>
+
+  <text x="60" y="90" fill="#e94560" font-family="monospace" font-size="11">{</text>
+  <text x="75" y="110" fill="#8b949e" font-family="monospace" font-size="11">"from": "a3f2-...",</text>
+  <text x="75" y="130" fill="#8b949e" font-family="monospace" font-size="11">"to":   "b7c1-...",</text>
+
+  <text x="75" y="158" fill="#2ea043" font-family="monospace" font-size="11">"status": {</text>
+  <text x="95" y="176" fill="#484f58" font-family="monospace" font-size="10">"state": "working",</text>
+  <text x="95" y="192" fill="#484f58" font-family="monospace" font-size="10">"model": "opus-4",</text>
+  <text x="95" y="208" fill="#484f58" font-family="monospace" font-size="10">"tokens_used": 42000,</text>
+  <text x="95" y="224" fill="#484f58" font-family="monospace" font-size="10">"current_tool": "Bash"</text>
+  <text x="75" y="240" fill="#2ea043" font-family="monospace" font-size="11">},</text>
+
+  <text x="75" y="264" fill="#e94560" font-family="monospace" font-size="11">"command": "review" | null,</text>
+
+  <text x="75" y="288" fill="#c9d1d9" font-family="monospace" font-size="11">"message": "Here are my findings",</text>
+
+  <text x="75" y="312" fill="#c9d1d9" font-family="monospace" font-size="11">"attachments": [</text>
+  <text x="95" y="330" fill="#484f58" font-family="monospace" font-size="10">{"type":"markdown", "data":"..."},</text>
+  <text x="95" y="346" fill="#484f58" font-family="monospace" font-size="10">{"type":"image/png", "path":"..."},</text>
+  <text x="95" y="362" fill="#484f58" font-family="monospace" font-size="10">{"type":"audio/wav", "path":"..."},</text>
+  <text x="95" y="378" fill="#484f58" font-family="monospace" font-size="10">{"type":"document", "path":"..."}</text>
+  <text x="75" y="396" fill="#c9d1d9" font-family="monospace" font-size="11">]</text>
+  <text x="60" y="406" fill="#e94560" font-family="monospace" font-size="11">}</text>
+
+  <!-- Field descriptions -->
+  <rect x="420" y="30" width="350" height="230" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="595" y="55" text-anchor="middle" fill="#c9d1d9" font-family="system-ui" font-size="13" font-weight="bold">Field Semantics</text>
+  <line x1="435" y1="65" x2="755" y2="65" stroke="#30363d"/>
+
+  <circle cx="445" cy="90" r="5" fill="#2ea043"/>
+  <text x="460" y="94" fill="#c9d1d9" font-family="system-ui" font-size="11" font-weight="bold">status</text>
+  <text x="460" y="110" fill="#484f58" font-family="system-ui" font-size="10">Always present. Auto-populated by MCP.</text>
+  <text x="460" y="124" fill="#484f58" font-family="system-ui" font-size="10">Model, state, token usage, current tool.</text>
+  <text x="460" y="138" fill="#484f58" font-family="system-ui" font-size="10">Lets neighbors/controller monitor health.</text>
+
+  <circle cx="445" cy="158" r="5" fill="#e94560"/>
+  <text x="460" y="162" fill="#c9d1d9" font-family="system-ui" font-size="11" font-weight="bold">command</text>
+  <text x="460" y="178" fill="#484f58" font-family="system-ui" font-size="10">Optional structured intent: "review",</text>
+  <text x="460" y="192" fill="#484f58" font-family="system-ui" font-size="10">"shutdown", "status_request", etc.</text>
+  <text x="460" y="206" fill="#484f58" font-family="system-ui" font-size="10">Agents define their own protocols.</text>
+
+  <circle cx="445" cy="226" r="5" fill="#c9d1d9"/>
+  <text x="460" y="230" fill="#c9d1d9" font-family="system-ui" font-size="11" font-weight="bold">message</text>
+  <text x="460" y="246" fill="#484f58" font-family="system-ui" font-size="10">Free-form string. The conversation.</text>
+
+  <!-- Attachment types -->
+  <rect x="420" y="280" width="350" height="180" rx="10" fill="#161b22" stroke="#30363d"/>
+  <text x="595" y="305" text-anchor="middle" fill="#c9d1d9" font-family="system-ui" font-size="13" font-weight="bold">Attachment Types</text>
+  <line x1="435" y1="315" x2="755" y2="315" stroke="#30363d"/>
+
+  <text x="445" y="340" fill="#533483" font-family="monospace" font-size="11">markdown</text>
+  <text x="555" y="340" fill="#484f58" font-family="system-ui" font-size="10">inline rendered content</text>
+  <text x="445" y="362" fill="#533483" font-family="monospace" font-size="11">image/*</text>
+  <text x="555" y="362" fill="#484f58" font-family="system-ui" font-size="10">png, svg, jpg (path or base64)</text>
+  <text x="445" y="384" fill="#533483" font-family="monospace" font-size="11">audio/*</text>
+  <text x="555" y="384" fill="#484f58" font-family="system-ui" font-size="10">wav, mp3 (path ref)</text>
+  <text x="445" y="406" fill="#533483" font-family="monospace" font-size="11">video/*</text>
+  <text x="555" y="406" fill="#484f58" font-family="system-ui" font-size="10">mp4, webm (path ref)</text>
+  <text x="445" y="428" fill="#533483" font-family="monospace" font-size="11">document</text>
+  <text x="555" y="428" fill="#484f58" font-family="system-ui" font-size="10">pdf, json, any file (path ref)</text>
+  <text x="445" y="450" fill="#533483" font-family="monospace" font-size="11">diff</text>
+  <text x="555" y="450" fill="#484f58" font-family="system-ui" font-size="10">unified diff / patch</text>
+
+  <!-- Auto-populated note -->
+  <rect x="40" y="430" width="350" height="80" rx="10" fill="#1a1a2e" stroke="#2ea043" stroke-width="1"/>
+  <text x="215" y="455" text-anchor="middle" fill="#2ea043" font-family="system-ui" font-size="12" font-weight="bold">Auto-Populated by MCP Server</text>
+  <text x="60" y="478" fill="#484f58" font-family="system-ui" font-size="11">from — caller's UUID (from MCP connection)</text>
+  <text x="60" y="496" fill="#484f58" font-family="system-ui" font-size="11">status — statusline telemetry snapshot</text>
+
+  <!-- Controller note -->
+  <rect x="40" y="530" width="720" height="100" rx="10" fill="#161b22" stroke="#e94560" stroke-width="1.5"/>
+  <text x="400" y="555" text-anchor="middle" fill="#e94560" font-family="system-ui" font-size="13" font-weight="bold">Controller as Peer</text>
+  <line x1="55" y1="565" x2="745" y2="565" stroke="#30363d"/>
+  <text x="60" y="588" fill="#c9d1d9" font-family="system-ui" font-size="11">Uses same send/inbox API. Address: "controller". Messages from controller appear in agent inboxes like any other.</text>
+  <text x="60" y="610" fill="#2ea043" font-family="system-ui" font-size="11">Extra privileges: traffic tap (sees all messages), shutdown any agent, spawn agents directly.</text>
+</svg>
