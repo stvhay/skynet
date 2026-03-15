@@ -17,6 +17,18 @@ Event-sourced MCP server for message-passing between agent instances. Singleton 
 | `spawn_neighbor(caller_uuid, claude_md?, model?, thinking_budget?)` | Register new agent, prepare credentials |
 | `shutdown(caller_uuid)` | Self-terminate, deregister from mesh |
 
+### REST/SSE API (controller web UI)
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `GET /api/events` | GET | SSE stream of all events (keepalive every 30s) |
+| `GET /api/agents` | GET | List all agents as JSON |
+| `POST /api/send` | POST | Send message from controller `{to, message?, command?}` |
+| `POST /api/spawn` | POST | Spawn agent `{model?, thinking_budget?, claude_md?, initial_message?}` |
+| `POST /api/agents/{uuid}/shutdown` | POST | Shut down a specific agent |
+| `GET /api/inbox` | GET | Read and drain controller's inbox |
+| `GET /` | GET | Serve controller UI (placeholder) |
+
 ### Environment Variables (per agent)
 
 | Variable | Description |
@@ -48,6 +60,12 @@ Event-sourced MCP server for message-passing between agent instances. Singleton 
 - **INV-18**: Full message exchange works end-to-end
 - **INV-19**: EventStore subscribers receive every appended event
 - **INV-20**: spawn_neighbor accepts model and thinking_budget parameters
+- **INV-21**: GET /api/events streams events via SSE
+- **INV-22**: GET /api/agents returns all agents as JSON
+- **INV-23**: POST /api/send enqueues message from controller
+- **INV-24**: POST /api/spawn registers agent and auto-sends initial_message
+- **INV-25**: POST /api/agents/{uuid}/shutdown deregisters agent
+- **INV-26**: GET /api/inbox returns controller's messages
 
 ## Failure Modes
 

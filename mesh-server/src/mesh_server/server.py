@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.session import ServerSession
 
+from mesh_server.api import create_api_routes
 from mesh_server.events import EventStore
 from mesh_server.projections import MeshState
 from mesh_server.spawner import prepare_spawn
@@ -20,6 +22,7 @@ from mesh_server.tools import (
     tool_shutdown,
     tool_whoami,
 )
+from mesh_server.types import AgentRegistered, generate_controller_uuid
 
 
 @dataclass
@@ -27,12 +30,23 @@ class AppContext:
     store: EventStore
     state: MeshState
     mesh_dir: Path
+    controller_uuid: str
 
 
-@asynccontextmanager
-async def app_lifespan(server: FastMCP):
-    """Initialize event store and rebuild state from event log."""
-    mesh_dir = Path(os.environ.get("MESH_DIR", ".mesh"))
+# Module-level shared state — initialized by _init_shared_state() before server starts.
+_shared: AppContext | None = None
+
+
+def _init_shared_state(mesh_dir: Path | None = None) -> AppContext:
+    """Create shared store, state, and controller identity.
+
+    Called once before the server starts. The same objects are used by both
+    MCP tool handlers (via lifespan context) and REST/SSE API routes.
+    """
+    global _shared
+    if mesh_dir is None:
+        mesh_dir = Path(os.environ.get("MESH_DIR", ".mesh"))
+
     store = EventStore(mesh_dir / "events.jsonl")
     state = MeshState()
 
@@ -40,7 +54,31 @@ async def app_lifespan(server: FastMCP):
     for event in store.replay():
         state.apply(event)
 
-    yield AppContext(store=store, state=state, mesh_dir=mesh_dir)
+    # Register controller as an agent in the mesh
+    controller_uuid = generate_controller_uuid()
+    ctrl_event = AgentRegistered(
+        uuid=controller_uuid,
+        token_hash={},  # Controller doesn't need token auth
+        pid=os.getpid(),
+        timestamp=time.time(),
+    )
+    store.append(ctrl_event)
+    state.apply(ctrl_event)
+
+    _shared = AppContext(
+        store=store, state=state, mesh_dir=mesh_dir, controller_uuid=controller_uuid
+    )
+    return _shared
+
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP):
+    """Yield the shared AppContext for MCP tool handlers."""
+    if _shared is None:
+        raise RuntimeError(
+            "Shared state not initialized — call _init_shared_state() first"
+        )
+    yield _shared
 
 
 mcp = FastMCP("mesh", lifespan=app_lifespan, json_response=True)
@@ -164,9 +202,37 @@ async def spawn_neighbor(
     return result
 
 
+def create_app(mesh_dir: Path | None = None) -> object:
+    """Create the combined ASGI app with MCP + REST/SSE routes.
+
+    Initializes shared state, registers API routes on FastMCP's Starlette app,
+    and returns the Starlette application.
+    """
+    ctx = _init_shared_state(mesh_dir)
+
+    # Add REST/SSE routes to FastMCP's Starlette app
+    api_routes = create_api_routes(
+        store=ctx.store,
+        state=ctx.state,
+        controller_uuid=ctx.controller_uuid,
+        mesh_dir=ctx.mesh_dir,
+    )
+    mcp._custom_starlette_routes.extend(api_routes)
+
+    return mcp.streamable_http_app()
+
+
 def run_server(host: str = "0.0.0.0", port: int = 9090) -> None:
-    """Start the MCP mesh server."""
-    mcp.run(transport="streamable-http", host=host, port=port)
+    """Start the MCP mesh server with REST/SSE API."""
+    import uvicorn
+
+    app = create_app()
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
+    server = uvicorn.Server(config)
+
+    import anyio
+
+    anyio.run(server.serve)
 
 
 if __name__ == "__main__":
