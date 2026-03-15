@@ -12,6 +12,7 @@ from mcp.server.session import ServerSession
 
 from mesh_server.events import EventStore
 from mesh_server.projections import MeshState
+from mesh_server.spawner import prepare_spawn
 from mesh_server.tools import (
     tool_read_inbox_async,
     tool_send,
@@ -133,6 +134,28 @@ async def shutdown(caller_uuid: str, ctx: Ctx) -> dict:
     """
     app = _get_app(ctx)
     return tool_shutdown(app.state, app.store, caller_uuid=caller_uuid)
+
+
+@mcp.tool()
+async def spawn_neighbor(
+    caller_uuid: str,
+    ctx: Ctx,
+    claude_md: str | None = None,
+) -> dict:
+    """Spawn a new agent in the mesh.
+
+    Args:
+        caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
+        claude_md: Optional CLAUDE.md content defining the new agent's role
+    """
+    app = _get_app(ctx)
+    result = prepare_spawn(
+        app.state,
+        app.store,
+        mesh_dir=app.mesh_dir,
+        claude_md=claude_md,
+    )
+    return result
 
 
 def run_server(host: str = "0.0.0.0", port: int = 9090) -> None:
