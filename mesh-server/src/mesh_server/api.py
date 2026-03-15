@@ -93,7 +93,15 @@ def create_api_routes(
 
     async def api_send(request: Request) -> Response:
         """Send a message from the controller."""
-        body = await request.json()
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                raise ValueError("Body must be a JSON object")
+        except Exception:
+            return JSONResponse(
+                {"code": "invalid_args", "data": {}, "error": "Invalid JSON body"},
+                status_code=400,
+            )
         to = body.get("to")
         if not to:
             return JSONResponse(
@@ -108,11 +116,21 @@ def create_api_routes(
             message=body.get("message"),
             command=body.get("command"),
         )
+        if result.get("code") == "not_found":
+            return JSONResponse(result, status_code=404)
         return JSONResponse(result)
 
     async def api_spawn(request: Request) -> Response:
         """Spawn a new agent."""
-        body = await request.json()
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                raise ValueError("Body must be a JSON object")
+        except Exception:
+            return JSONResponse(
+                {"code": "invalid_args", "data": {}, "error": "Invalid JSON body"},
+                status_code=400,
+            )
         result = prepare_spawn(
             state,
             store,
@@ -134,7 +152,7 @@ def create_api_routes(
 
         # Auto-send initial_message if provided
         initial_message = body.get("initial_message")
-        if initial_message and result["code"] == "ok":
+        if initial_message:
             new_uuid = result["data"]["uuid"]
             tool_send(
                 state,
@@ -150,6 +168,8 @@ def create_api_routes(
         """Shut down a specific agent."""
         target_uuid = request.path_params["uuid"]
         result = tool_shutdown(state, store, caller_uuid=target_uuid)
+        if result.get("code") == "not_found":
+            return JSONResponse(result, status_code=404)
         return JSONResponse(result)
 
     async def api_inbox(request: Request) -> Response:

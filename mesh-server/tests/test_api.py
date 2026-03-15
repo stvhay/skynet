@@ -122,6 +122,17 @@ async def test_inv23_api_send_missing_to(client):
     assert resp.json()["code"] == "invalid_args"
 
 
+async def test_inv23_api_send_malformed_json(client):
+    """POST /api/send with invalid JSON body returns 400."""
+    resp = await client.post(
+        "/api/send",
+        content=b"not valid json{{{",
+        headers={"Content-Type": "application/json"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["code"] == "invalid_args"
+
+
 async def test_inv24_api_spawn(client, state, store, mesh_dir):
     """POST /api/spawn registers a new agent."""
     resp = await client.post(

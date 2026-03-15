@@ -217,12 +217,13 @@ def create_app(mesh_dir: Path | None = None) -> object:
         controller_uuid=ctx.controller_uuid,
         mesh_dir=ctx.mesh_dir,
     )
+    mcp._custom_starlette_routes.clear()
     mcp._custom_starlette_routes.extend(api_routes)
 
     return mcp.streamable_http_app()
 
 
-def run_server(host: str = "0.0.0.0", port: int = 9090) -> None:
+def run_server(host: str = "127.0.0.1", port: int = 9090) -> None:
     """Start the MCP mesh server with REST/SSE API."""
     import uvicorn
 
