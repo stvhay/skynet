@@ -16,6 +16,9 @@ build/
 # Mesh runtime
 .mesh/
 
+# Worktrees
+.worktrees/
+
 # IDE
 .idea/
 .vscode/
