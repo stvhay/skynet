@@ -34,9 +34,9 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for subsystem boundaries and technol
 
 | Subsystem | Purpose | Status |
 |-----------|---------|--------|
-| [mesh-server](mesh-server/) | Message routing, agent lifecycle, event store | v0.1 |
-| controller-ui | Web UI for human controller | Planned |
-| agent-runtime | Agent bootstrap and lifecycle management | Planned |
+| [mesh-server](mesh-server/) | Message routing, agent lifecycle, event store | v0.2 |
+| [controller-ui](mesh-server/src/mesh_server/static/) | Web UI for human controller | v0.2 |
+| [agent-runtime](agent-runtime/) | Agent bootstrap and lifecycle management | v0.2 |
 | channels | XOR-derived filesystem channels | Planned |
 
 ## Quick Start
@@ -52,11 +52,10 @@ cd mesh-server && uv sync
 # Run tests
 uv run pytest
 
-# Start the server
+# Start the server (includes web UI)
 uv run mesh-server
+# Open http://localhost:9090 for the controller UI
 ```
-
-> Full agent orchestration requires controller-ui and agent-runtime (planned).
 
 ## Documentation
 

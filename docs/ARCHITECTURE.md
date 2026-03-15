@@ -14,9 +14,9 @@ For protocol details, see [DESIGN.md](DESIGN.md).
 
 | Subsystem | Purpose | Status | Spec |
 |-----------|---------|--------|------|
-| [mesh-server](../mesh-server/) | Message routing, agent lifecycle, event store | v0.1 | [SPEC.md](../mesh-server/SPEC.md) |
-| controller-ui | Web UI for human controller | Planned | — |
-| agent-runtime | Agent bootstrap and lifecycle management | Planned | — |
+| [mesh-server](../mesh-server/) | Message routing, agent lifecycle, event store | v0.2 | [SPEC.md](../mesh-server/SPEC.md) |
+| [controller-ui](../mesh-server/src/mesh_server/static/) | Web UI for human controller | v0.2 | — |
+| [agent-runtime](../agent-runtime/) | Agent bootstrap and lifecycle management | v0.2 | — |
 | channels | XOR-derived filesystem channels | Planned | — |
 
 ## Technology Stack
@@ -123,6 +123,30 @@ The mesh server treats all agents identically. Any MCP-capable process can join.
 - **MESH_PRIVATE_KEY** — RSA private key for future message signing; may be ignored in v0.1
 
 A Python script, Node.js process, or any other MCP-capable client can participate by: receiving env vars at spawn, connecting to the MCP server, and calling the standard tools.
+
+## REST/SSE API
+
+In the context of needing browser-accessible endpoints for the controller UI, facing the choice between a separate gateway process or integrated routes, we decided to mount REST routes on the same Starlette app to avoid operational complexity of multiple processes, accepting tighter coupling between MCP and REST concerns.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | /api/events | SSE stream of all events |
+| GET | /api/agents | List all agents |
+| POST | /api/send | Send message from controller |
+| POST | /api/spawn | Spawn agent with optional initial_message |
+| POST | /api/agents/{uuid}/shutdown | Deregister agent |
+| GET | /api/inbox | Read controller's inbox |
+| GET | / | Controller web UI |
+
+## Hook Architecture
+
+In the context of ensuring agent identity integrity and clean lifecycle management, facing the risk that Claude agents might forget to pass correct UUIDs or call shutdown, we decided to use PreToolUse hooks for caller_uuid injection and Stop hooks for deregistration to make these guarantees mechanical rather than behavioral, accepting the dependency on Claude Code's hook system.
+
+| Hook | Type | Guarantee |
+|---|---|---|
+| SessionStart | Soft | Identity + protocol preamble injected into context |
+| PreToolUse | Hard | caller_uuid always matches agent's UUID |
+| Stop | Hard | Agent always deregistered on exit |
 
 ## Further Reading
 
