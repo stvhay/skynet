@@ -204,7 +204,7 @@ header .status.disconnected { color: var(--status-red); }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -397,18 +397,41 @@ button:active { background: var(--border); }
   color: var(--text-secondary);
   border-bottom-color: var(--accent);
 }
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--accent);
+  color: var(--bg-primary);
+  padding: 8px 16px;
+  z-index: 1000;
+  font-size: 13px;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 </style>
 </head>
 <body>
+<a href="#event-log-body" class="skip-link" tabindex="0">Skip to event log</a>
 <div id="app">
   <header>
     <h1>MCP Mesh</h1>
-    <span id="sse-status" class="status disconnected">disconnected</span>
+    <span id="sse-status" class="status disconnected" role="status" aria-live="polite">disconnected</span>
   </header>
   <div id="graph-container"></div>
   <div id="event-log">
     <div class="panel-header">Event Log</div>
-    <div class="panel-body" id="event-log-body" role="log" aria-live="polite" aria-label="Event log"></div>
+    <div class="panel-body" id="event-log-body" role="log" aria-live="polite" aria-label="Event log" tabindex="0"></div>
     <div class="scroll-indicator" id="scroll-indicator" style="display:none">Auto-scroll paused — new events below</div>
   </div>
   <div id="detail-panel">
@@ -416,7 +439,7 @@ button:active { background: var(--border); }
       <button class="detail-tab active" role="tab" aria-selected="true" id="tab-detail" aria-controls="detail-body">Detail</button>
       <button class="detail-tab" role="tab" aria-selected="false" id="tab-inbox" aria-controls="detail-body">Inbox</button>
     </div>
-    <div class="panel-body" id="detail-body" role="tabpanel" aria-labelledby="tab-detail">
+    <div class="panel-body" id="detail-body" role="tabpanel" aria-labelledby="tab-detail" tabindex="0">
       <div class="detail-empty">Click a node or edge to inspect</div>
     </div>
   </div>
@@ -443,7 +466,7 @@ button:active { background: var(--border); }
         <label>initial message</label>
         <textarea id="spawn-msg" placeholder="First task..."></textarea>
       </div>
-      <button id="btn-spawn">spawn</button>
+      <button id="btn-spawn" aria-label="Spawn new agent">spawn</button>
     </div>
     <div>
       <div class="section-title">Send</div>
@@ -461,7 +484,7 @@ button:active { background: var(--border); }
         <label>command</label>
         <input type="text" id="send-cmd" placeholder="optional">
       </div>
-      <button id="btn-send">send</button>
+      <button id="btn-send" aria-label="Send message to selected agent">send</button>
     </div>
   </div>
 </div>
