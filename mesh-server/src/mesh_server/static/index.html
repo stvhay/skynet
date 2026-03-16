@@ -585,7 +585,8 @@ button:active { background: var(--border); }
     const body = document.getElementById('event-log-body');
     if (allEvents.length > 1000) {
       allEvents.shift();
-      if (body.firstChild) body.removeChild(body.firstChild);
+      const oldest = body.querySelector('.event-row');
+      if (oldest) body.removeChild(oldest);
     }
     const row = document.createElement('div');
     row.className = 'event-row';
