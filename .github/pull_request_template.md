@@ -10,7 +10,7 @@ Closes #
 
 ## Implementation plan
 
-<!-- Paste or link the plan from docs/plans/. -->
+<!-- Paste or link the implementation plan. -->
 
 <details>
 <summary>Plan</summary>

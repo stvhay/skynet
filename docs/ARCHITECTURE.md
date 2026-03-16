@@ -29,7 +29,6 @@ For protocol details, see [DESIGN.md](DESIGN.md).
 | Package Manager | uv |
 | Linting | ruff |
 | Environment | Nix flakes + direnv |
-| Context Management | beads (`bd`) |
 | Database | dolt (version-controlled) |
 
 ## Event-Sourced Core

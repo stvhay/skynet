@@ -18,7 +18,7 @@ Run `/brainstorming` to explore the problem space before writing code.
 
 ### 4. Write an implementation plan
 
-Run `/writing-plans` to produce a structured plan in `docs/plans/`.
+Run `/writing-plans` to produce a structured plan.
 
 ### 5. Execute the plan
 
