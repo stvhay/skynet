@@ -1,71 +1,55 @@
 # MCP Mesh
 
-> A message-passing actor system for orchestrating AI agents as a collaborative mesh network.
+> Orchestrate a swarm of AI agents that talk, collaborate, and self-organize — with you in the loop.
 
 ![MCP Mesh](docs/images/hero.png)
 
-MCP Mesh lets multiple Claude CLI instances (or any MCP-capable process) communicate as peers through a shared server. Agents send messages, spawn neighbors, and self-organize — while a human controller participates as a privileged peer through a web UI. The system is event-sourced, crash-recoverable, and uses deterministic XOR-based filesystem channels for file exchange.
+## What is MCP Mesh?
 
-## Key Concepts
+Imagine giving a task to one AI agent and watching it recruit specialists, delegate subtasks, and coordinate across a team — all while you observe and steer from a live dashboard. That is MCP Mesh.
 
-### Peer-to-Peer Messaging
+MCP Mesh is an actor-based runtime that connects multiple Claude CLI instances (or any MCP-capable process) into a peer-to-peer messaging network. Every agent gets an inbox, can send messages to any other agent, and can spawn new neighbors on demand. There is no central orchestrator deciding who talks to whom — agents discover each other, negotiate, and self-organize. The entire conversation history is event-sourced: every message, every registration, every shutdown is recorded in an append-only log that survives crashes and enables full replay.
 
-Agents communicate through inbox queues. No direct inter-process calls. The `from` field is the primary discovery mechanism.
+You participate as a privileged peer through a web-based controller UI. You see every message flowing through the mesh in real time, can inject instructions to any agent, spawn new agents with custom system prompts, and shut down misbehaving ones — all from your browser. The mesh treats you as just another node with elevated permissions, so the same protocol that agents use to talk to each other is the one you use to talk to them.
 
-### Human-in-the-Loop
+## See it in action
 
-The controller has the same send/inbox interface as agents, plus traffic monitoring and agent lifecycle management.
-
-### Event-Sourced
-
-All state changes are persisted as append-only events. Full replay reconstructs state on startup. Crash recovery is built in.
-
-### XOR Channels
-
-Deterministic filesystem paths derived from participant UUIDs. Symmetric, associative, no coordination needed.
+Start the server and open the controller UI at `http://localhost:9090`. From the dashboard, spawn your first agent — give it a task and watch it appear in the agent list. That agent can spawn its own neighbors, and suddenly you have a small team forming before your eyes. Messages stream through the event log on the left. Click any agent to see its inbox, send it a direct message, or shut it down. The whole system is live: no polling, no page refreshes, just a real-time view of autonomous agents collaborating while you hold the reins.
 
 ## Architecture at a Glance
 
 ![Architecture Overview](docs/images/01-architecture-overview.svg)
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for subsystem boundaries and technology decisions.
-
-## Subsystems
-
-| Subsystem | Purpose | Status |
-|-----------|---------|--------|
-| [mesh-server](mesh-server/) | Message routing, agent lifecycle, event store | v0.2 |
-| [controller-ui](mesh-server/src/mesh_server/static/) | Web UI for human controller | v0.2 |
-| [agent-runtime](agent-runtime/) | Agent bootstrap and lifecycle management | v0.2 |
-| channels | XOR-derived filesystem channels | Planned |
+Agents communicate through inbox queues on a shared MCP server. All state is event-sourced — restart the server and it replays from the log, losing nothing. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture.
 
 ## Quick Start
 
 ```bash
-# Environment setup (requires Nix)
+# Set up the environment (requires Nix)
 direnv allow
-# or: nix develop
 
-# Install dependencies
+# Install and run
 cd mesh-server && uv sync
-
-# Run tests
-uv run pytest
-
-# Start the server (includes web UI)
 uv run mesh-server
-# Open http://localhost:9090 for the controller UI
+
+# Open http://localhost:9090
 ```
 
-## Documentation
+## Subsystems
 
-- [Design Document](docs/DESIGN.md) — Protocol specification, tool API, message schema
-- [Architecture](docs/ARCHITECTURE.md) — System structure, technology decisions, data flow
-- [Server Spec](mesh-server/SPEC.md) — Invariants, failure modes, integration contract
+| Subsystem | Path | Purpose |
+|-----------|------|---------|
+| mesh-server | `mesh-server/` | Singleton MCP server: message routing, agent lifecycle, event store |
+| controller-ui | `mesh-server/src/mesh_server/static/` | Web UI for traffic monitoring, agent management, send/receive |
+| agent-runtime | `agent-runtime/` | Agent bootstrap, UUID assignment, MCP connection, lifecycle |
+| channels | *(planned)* | XOR-derived filesystem channels for attachments and shared artifacts |
 
 ## Development
 
 ```bash
+# Environment setup (requires Nix + direnv)
+direnv allow
+
 # Build
 cd mesh-server && uv sync
 
@@ -77,6 +61,9 @@ ruff check .
 ruff format --check .
 ```
 
-## Contributing
+## Documentation
 
-See the [Workflow section in CLAUDE.md](CLAUDE.md#workflow) for the development process.
+- [Architecture](docs/ARCHITECTURE.md) — System structure, subsystem boundaries, technology decisions
+- [Design Document](docs/DESIGN.md) — Protocol specification, tool API, message schema
+- [Server Spec](mesh-server/SPEC.md) — Invariants, failure modes, integration contract
+- [Contributing](CLAUDE.md#workflow) — Development workflow and conventions

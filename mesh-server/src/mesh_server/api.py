@@ -18,6 +18,7 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from mesh_server.events import EventStore
+from mesh_server.launch import launch_agent
 from mesh_server.projections import MeshState
 from mesh_server.spawner import prepare_spawn
 from mesh_server.tools import (
@@ -45,6 +46,7 @@ def create_api_routes(
     controller_uuid: str,
     mesh_dir: Path,
     agent_supervisor: AgentSupervisor | None = None,
+    server_base_url: str = "http://127.0.0.1:9090",
 ) -> list[Route]:
     """Create REST/SSE API routes.
 
@@ -147,14 +149,20 @@ def create_api_routes(
             return JSONResponse(result, status_code=400)
 
         # Launch via supervisor if available
-        if agent_supervisor is not None:
-            try:
-                await agent_supervisor.launch(**result["data"])
-            except Exception:
-                logger.exception("Failed to launch agent via supervisor")
-
-        # Auto-send initial_message if provided
         initial_message = body.get("initial_message")
+        pid = await launch_agent(
+            agent_supervisor,
+            result,
+            controller_uuid,
+            role=body.get("claude_md"),
+            server_url=f"{server_base_url}/mcp",
+            server_base_url=server_base_url,
+            initial_prompt=initial_message,
+        )
+        if pid is None and agent_supervisor is not None:
+            result["data"]["launch_error"] = "supervisor launch failed"
+
+        # Also send initial_message to inbox so the agent can read it via mesh tools
         if initial_message:
             new_uuid = result["data"]["uuid"]
             tool_send(

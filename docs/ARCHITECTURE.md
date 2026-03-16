@@ -16,7 +16,7 @@ For protocol details, see [DESIGN.md](DESIGN.md).
 |-----------|---------|--------|------|
 | [mesh-server](../mesh-server/) | Message routing, agent lifecycle, event store | v0.2 | [SPEC.md](../mesh-server/SPEC.md) |
 | [controller-ui](../mesh-server/src/mesh_server/static/) | Web UI for human controller | v0.2 | — |
-| [agent-runtime](../agent-runtime/) | Agent bootstrap and lifecycle management | v0.2 | — |
+| [agent-runtime](../agent-runtime/) | Agent bootstrap and lifecycle management | v0.3 | [SPEC.md](../agent-runtime/SPEC.md) |
 | channels | XOR-derived filesystem channels | Planned | — |
 
 ## Technology Stack
@@ -147,6 +147,14 @@ In the context of ensuring agent identity integrity and clean lifecycle manageme
 | SessionStart | Soft | Identity + protocol preamble injected into context |
 | PreToolUse | Hard | caller_uuid always matches agent's UUID |
 | Stop | Hard | Agent always deregistered on exit |
+
+## Process Supervision
+
+In the context of needing spawn_neighbor to launch real Claude CLI processes, facing the choice between mesh-server orchestrating launches directly or delegating to an external supervisor, we decided to make agent-runtime a direct dependency of mesh-server and instantiate an AgentSupervisor within create_app(), accepting the coupling in exchange for single-process operational simplicity.
+
+The supervisor writes config artifacts (MCP config, hooks, CLAUDE.md, settings.json) to the agent's directory, launches `claude` as a subprocess, and monitors it. If an agent process exits unexpectedly, the supervisor emits an AgentDeregistered event automatically.
+
+Spawned agents inherit the parent process environment, including Claude Code subscription credentials — no API key is required.
 
 ## Further Reading
 

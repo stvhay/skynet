@@ -15,7 +15,7 @@ def generate_mcp_config(server_url: str, agent_uuid: str, bearer_token: str) -> 
     return {
         "mcpServers": {
             "mesh": {
-                "type": "streamable-http",
+                "type": "http",
                 "url": server_url,
                 "headers": {
                     "Authorization": f"Bearer {bearer_token}",
@@ -122,11 +122,21 @@ def generate_claude_md(role: str | None) -> str:
 
 
 def generate_settings_json(hooks_dir: str) -> dict:
-    """Generate settings.json with all three hooks configured.
+    """Generate settings.json with hooks and auto-approved mesh tools.
 
     INV-7: Settings configures SessionStart, PreToolUse, and Stop hooks.
     """
     return {
+        "permissions": {
+            "allow": [
+                "mcp__mesh__whoami",
+                "mcp__mesh__send",
+                "mcp__mesh__read_inbox",
+                "mcp__mesh__show_neighbors",
+                "mcp__mesh__spawn_neighbor",
+                "mcp__mesh__shutdown",
+            ],
+        },
         "hooks": {
             "SessionStart": [
                 {
@@ -146,7 +156,7 @@ def generate_settings_json(hooks_dir: str) -> dict:
                     "command": os.path.join(hooks_dir, "stop.sh"),
                 }
             ],
-        }
+        },
     }
 
 
@@ -164,6 +174,7 @@ def write_agent_configs(
 
     Returns dict of paths: mcp_config, claude_md, settings_json, hooks_dir.
     """
+    agent_dir = os.path.abspath(agent_dir)
     os.makedirs(agent_dir, exist_ok=True)
 
     # Hooks directory
@@ -199,8 +210,10 @@ def write_agent_configs(
             stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH,
         )
 
-    # Settings JSON
-    settings_path = os.path.join(agent_dir, "settings.json")
+    # Settings JSON — placed in .claude/ so Claude CLI picks it up as project settings
+    claude_dir = os.path.join(agent_dir, ".claude")
+    os.makedirs(claude_dir, exist_ok=True)
+    settings_path = os.path.join(claude_dir, "settings.json")
     settings = generate_settings_json(hooks_dir)
     with open(settings_path, "w") as f:
         json.dump(settings, f, indent=2)

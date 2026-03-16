@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from contextlib import asynccontextmanager
@@ -11,8 +12,10 @@ from pathlib import Path
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.session import ServerSession
 
+from agent_runtime.launcher import AgentSupervisor
 from mesh_server.api import create_api_routes
 from mesh_server.events import EventStore
+from mesh_server.launch import launch_agent
 from mesh_server.projections import MeshState
 from mesh_server.spawner import prepare_spawn
 from mesh_server.tools import (
@@ -24,6 +27,8 @@ from mesh_server.tools import (
 )
 from mesh_server.types import AgentRegistered, generate_controller_uuid, uuid_kind
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class AppContext:
@@ -31,6 +36,8 @@ class AppContext:
     state: MeshState
     mesh_dir: Path
     controller_uuid: str
+    server_base_url: str = "http://127.0.0.1:9090"
+    supervisor: AgentSupervisor | None = None
 
 
 def _init_app_context(mesh_dir: Path | None = None) -> AppContext:
@@ -188,6 +195,7 @@ async def spawn_neighbor(
     claude_md: str | None = None,
     model: str = "sonnet",
     thinking_budget: int | None = None,
+    initial_prompt: str | None = None,
 ) -> dict:
     """Spawn a new agent in the mesh.
 
@@ -196,6 +204,7 @@ async def spawn_neighbor(
         claude_md: Optional CLAUDE.md content defining the new agent's role
         model: Model short name: "opus", "sonnet", or "haiku" (default: "sonnet")
         thinking_budget: Optional thinking token budget (None = no extended thinking)
+        initial_prompt: Optional initial prompt passed to claude CLI via -p flag
     """
     app = _get_app(ctx)
     result = prepare_spawn(
@@ -206,10 +215,24 @@ async def spawn_neighbor(
         model=model,
         thinking_budget=thinking_budget,
     )
+
+    pid = await launch_agent(
+        app.supervisor, result, caller_uuid, role=claude_md,
+        server_url=f"{app.server_base_url}/mcp",
+        server_base_url=app.server_base_url,
+        initial_prompt=initial_prompt,
+    )
+    if pid is None and result["code"] == "ok" and app.supervisor is not None:
+        result["data"]["launch_error"] = "supervisor launch failed"
+
     return result
 
 
-def create_app(mesh_dir: Path | None = None) -> object:
+def create_app(
+    mesh_dir: Path | None = None,
+    host: str = "127.0.0.1",
+    port: int = 9090,
+) -> object:
     """Create the combined ASGI app with MCP + REST/SSE routes.
 
     Initializes app context, registers API routes via FastMCP's public
@@ -217,6 +240,21 @@ def create_app(mesh_dir: Path | None = None) -> object:
     """
     global _app_context
     ctx = _init_app_context(mesh_dir)
+    # Use 127.0.0.1 for agent configs even when binding to 0.0.0.0
+    connect_host = "127.0.0.1" if host == "0.0.0.0" else host
+    ctx.server_base_url = f"http://{connect_host}:{port}"
+
+    async def _on_agent_exit(uuid: str, exit_code: int) -> None:
+        """Deregister agent when its process exits without explicit shutdown."""
+        agent = ctx.state.get_agent(uuid)
+        if agent and agent.alive:
+            logger.info(
+                "Agent %s exited with code %d, deregistering", uuid, exit_code
+            )
+            tool_shutdown(ctx.state, ctx.store, caller_uuid=uuid)
+
+    supervisor = AgentSupervisor(shutdown_callback=_on_agent_exit)
+    ctx.supervisor = supervisor
     _app_context = ctx
 
     # Register REST/SSE routes via FastMCP's public custom_route API
@@ -225,6 +263,8 @@ def create_app(mesh_dir: Path | None = None) -> object:
         state=ctx.state,
         controller_uuid=ctx.controller_uuid,
         mesh_dir=ctx.mesh_dir,
+        agent_supervisor=supervisor,
+        server_base_url=ctx.server_base_url,
     )
     for route in api_routes:
         mcp.custom_route(route.path, methods=route.methods)(route.endpoint)
@@ -240,7 +280,7 @@ def run_server(host: str = "0.0.0.0", port: int = 9090) -> None:
     """
     import uvicorn
 
-    app = create_app()
+    app = create_app(host=host, port=port)
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
 

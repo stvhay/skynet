@@ -31,7 +31,7 @@ class TestInv1McpConfigGeneration:
 
         assert "mcpServers" in config
         mesh = config["mcpServers"]["mesh"]
-        assert mesh["type"] == "streamable-http"
+        assert mesh["type"] == "http"
         assert mesh["url"] == SERVER_URL
         assert mesh["headers"]["Authorization"] == f"Bearer {BEARER_TOKEN}"
         assert mesh["headers"]["X-Agent-ID"] == AGENT_UUID

@@ -67,6 +67,10 @@ Event-sourced MCP server for message-passing between agent instances. Singleton 
 - **INV-25**: POST /api/agents/{uuid}/shutdown deregisters agent
 - **INV-26**: GET /api/inbox returns controller's messages
 - **INV-27**: Spawn chain with mock agents completes end-to-end
+- **INV-28**: spawn_neighbor (MCP) launches Claude CLI subprocess via AgentSupervisor
+- **INV-29**: REST /api/spawn launches Claude CLI subprocess via AgentSupervisor
+- **INV-30**: Supervisor emits AgentDeregistered when process exits unexpectedly
+- **INV-31**: Mock CLI agent completes full spawn→connect→message→shutdown cycle
 
 ## Failure Modes
 
