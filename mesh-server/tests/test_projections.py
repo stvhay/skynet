@@ -1,13 +1,9 @@
 """Tests for in-memory projections."""
 
-import asyncio
 import time
-
-import pytest
 
 from mesh_server.projections import MeshState
 from mesh_server.types import (
-    BROADCAST_UUID,
     AgentDeregistered,
     AgentRegistered,
     AgentState,

@@ -5,9 +5,9 @@ import logging
 import os
 import subprocess
 
-logger = logging.getLogger(__name__)
-
 from agent_runtime.config import write_agent_configs
+
+logger = logging.getLogger(__name__)
 
 
 class AgentProcess:

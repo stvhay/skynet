@@ -18,8 +18,6 @@ DIM = "\033[2m"
 def fmt(e):
     t = e["type"]
     c = COLORS.get(t, "")
-    ts = time.strftime("%H:%M:%S", time.localtime(e.get("timestamp", 0)))
-
     if t == "AgentRegistered":
         return f"{c}+ REGISTER{RESET}  {e['uuid'][:12]}"
     elif t == "AgentDeregistered":

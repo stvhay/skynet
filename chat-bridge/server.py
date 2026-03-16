@@ -2,7 +2,7 @@
 """Chat bridge: a web UI that activates when an external GET request arrives."""
 
 import asyncio
-import json
+
 from aiohttp import web
 
 # State: when a GET /message comes in, we store a Future here
