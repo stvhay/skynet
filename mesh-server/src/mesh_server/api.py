@@ -45,6 +45,7 @@ def create_api_routes(
     controller_uuid: str,
     mesh_dir: Path,
     agent_supervisor: AgentSupervisor | None = None,
+    server_base_url: str = "http://127.0.0.1:9090",
 ) -> list[Route]:
     """Create REST/SSE API routes.
 
@@ -156,8 +157,8 @@ def create_api_routes(
                     agent_dir=d["agent_dir"],
                     bearer_token=d["bearer_token"],
                     spawner_uuid=controller_uuid,
-                    server_url="http://127.0.0.1:9090/mcp",
-                    server_base_url="http://127.0.0.1:9090",
+                    server_url=f"{server_base_url}/mcp",
+                    server_base_url=server_base_url,
                     role=body.get("claude_md"),
                     thinking_budget=d.get("thinking_budget"),
                 )
