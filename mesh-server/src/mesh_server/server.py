@@ -22,7 +22,7 @@ from mesh_server.tools import (
     tool_shutdown,
     tool_whoami,
 )
-from mesh_server.types import AgentRegistered, generate_controller_uuid
+from mesh_server.types import AgentRegistered, generate_controller_uuid, uuid_kind
 
 
 @dataclass
@@ -33,17 +33,12 @@ class AppContext:
     controller_uuid: str
 
 
-# Module-level shared state — initialized by _init_shared_state() before server starts.
-_shared: AppContext | None = None
-
-
-def _init_shared_state(mesh_dir: Path | None = None) -> AppContext:
-    """Create shared store, state, and controller identity.
+def _init_app_context(mesh_dir: Path | None = None) -> AppContext:
+    """Create store, state, and controller identity.
 
     Called once before the server starts. The same objects are used by both
     MCP tool handlers (via lifespan context) and REST/SSE API routes.
     """
-    global _shared
     if mesh_dir is None:
         mesh_dir = Path(os.environ.get("MESH_DIR", ".mesh"))
 
@@ -54,31 +49,43 @@ def _init_shared_state(mesh_dir: Path | None = None) -> AppContext:
     for event in store.replay():
         state.apply(event)
 
-    # Register controller as an agent in the mesh
-    controller_uuid = generate_controller_uuid()
-    ctrl_event = AgentRegistered(
-        uuid=controller_uuid,
-        token_hash={},  # Controller doesn't need token auth
-        pid=os.getpid(),
-        timestamp=time.time(),
-    )
-    store.append(ctrl_event)
-    state.apply(ctrl_event)
+    # Only register controller if not already present from replay
+    existing_controller = None
+    for agent in state.list_all_agents():
+        if uuid_kind(agent.uuid) == "controller" and agent.alive:
+            existing_controller = agent.uuid
+            break
 
-    _shared = AppContext(
+    if existing_controller:
+        controller_uuid = existing_controller
+    else:
+        controller_uuid = generate_controller_uuid()
+        ctrl_event = AgentRegistered(
+            uuid=controller_uuid,
+            token_hash={},  # Controller doesn't need token auth
+            pid=os.getpid(),
+            timestamp=time.time(),
+        )
+        store.append(ctrl_event)
+        state.apply(ctrl_event)
+
+    return AppContext(
         store=store, state=state, mesh_dir=mesh_dir, controller_uuid=controller_uuid
     )
-    return _shared
+
+
+# Holds the context created by create_app(), consumed by app_lifespan().
+_app_context: AppContext | None = None
 
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP):
-    """Yield the shared AppContext for MCP tool handlers."""
-    if _shared is None:
+    """Yield the AppContext for MCP tool handlers."""
+    if _app_context is None:
         raise RuntimeError(
-            "Shared state not initialized — call _init_shared_state() first"
+            "App context not initialized — call create_app() first"
         )
-    yield _shared
+    yield _app_context
 
 
 mcp = FastMCP("mesh", lifespan=app_lifespan, json_response=True)
@@ -205,26 +212,32 @@ async def spawn_neighbor(
 def create_app(mesh_dir: Path | None = None) -> object:
     """Create the combined ASGI app with MCP + REST/SSE routes.
 
-    Initializes shared state, registers API routes on FastMCP's Starlette app,
-    and returns the Starlette application.
+    Initializes app context, registers API routes via FastMCP's public
+    custom_route decorator, and returns the Starlette application.
     """
-    ctx = _init_shared_state(mesh_dir)
+    global _app_context
+    ctx = _init_app_context(mesh_dir)
+    _app_context = ctx
 
-    # Add REST/SSE routes to FastMCP's Starlette app
+    # Register REST/SSE routes via FastMCP's public custom_route API
     api_routes = create_api_routes(
         store=ctx.store,
         state=ctx.state,
         controller_uuid=ctx.controller_uuid,
         mesh_dir=ctx.mesh_dir,
     )
-    mcp._custom_starlette_routes.clear()
-    mcp._custom_starlette_routes.extend(api_routes)
+    for route in api_routes:
+        mcp.custom_route(route.path, methods=route.methods)(route.endpoint)
 
     return mcp.streamable_http_app()
 
 
-def run_server(host: str = "127.0.0.1", port: int = 9090) -> None:
-    """Start the MCP mesh server with REST/SSE API."""
+def run_server(host: str = "0.0.0.0", port: int = 9090) -> None:
+    """Start the MCP mesh server with REST/SSE API.
+
+    Binds to 0.0.0.0 by default so the server is accessible from
+    other containers and the host machine.
+    """
     import uvicorn
 
     app = create_app()

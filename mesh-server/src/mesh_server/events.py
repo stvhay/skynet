@@ -28,16 +28,22 @@ _EVENT_TYPES: dict[str, type] = {
 class EventStore:
     """Append-only JSONL event log with crash recovery and pub/sub."""
 
+    # Auto-remove subscribers after this many consecutive dropped events
+    _MAX_DROPS = 10
+
     def __init__(self, path: Path | str) -> None:
         self.path = Path(path)
         self._subscribers: list[asyncio.Queue] = []
+        self._drop_counts: dict[int, int] = {}  # id(queue) -> consecutive drops
 
     def subscribe(self, queue: asyncio.Queue) -> None:
         """Register a queue to receive all future appended events."""
         self._subscribers.append(queue)
+        self._drop_counts[id(queue)] = 0
 
     def unsubscribe(self, queue: asyncio.Queue) -> None:
         """Remove a queue from the subscriber list."""
+        self._drop_counts.pop(id(queue), None)
         try:
             self._subscribers.remove(queue)
         except ValueError:
@@ -55,12 +61,25 @@ class EventStore:
         finally:
             os.close(fd)
 
-        # Notify subscribers (non-blocking)
+        # Notify subscribers (non-blocking); auto-remove stale ones
+        stale: list[asyncio.Queue] = []
         for queue in self._subscribers:
             try:
                 queue.put_nowait(event)
+                self._drop_counts[id(queue)] = 0
             except asyncio.QueueFull:
-                logging.warning("Event subscriber queue full — event dropped")
+                drops = self._drop_counts.get(id(queue), 0) + 1
+                self._drop_counts[id(queue)] = drops
+                if drops >= self._MAX_DROPS:
+                    logging.warning(
+                        "Event subscriber queue full for %d consecutive events — removing",
+                        drops,
+                    )
+                    stale.append(queue)
+                else:
+                    logging.warning("Event subscriber queue full — event dropped")
+        for queue in stale:
+            self.unsubscribe(queue)
 
     def replay(self) -> list[Event]:
         """Replay all events from the log. Skips incomplete trailing lines."""

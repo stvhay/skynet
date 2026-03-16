@@ -51,6 +51,9 @@ def create_api_routes(
     Returns a list of Starlette Route objects to be added to the app.
     All routes close over the provided store, state, and controller_uuid.
     """
+    # Cache index.html content at startup to avoid blocking reads per request
+    static_dir = Path(__file__).parent / "static"
+    _index_html = (static_dir / "index.html").read_text()
 
     async def api_events(request: Request) -> Response:
         """SSE endpoint — stream all events to the controller."""
@@ -178,11 +181,9 @@ def create_api_routes(
         return JSONResponse(result)
 
     async def index(request: Request) -> Response:
-        """Serve controller UI from static/index.html."""
-        static_dir = Path(__file__).parent / "static"
-        index_file = static_dir / "index.html"
+        """Serve controller UI from cached index.html."""
         return Response(
-            content=index_file.read_text(),
+            content=_index_html,
             media_type="text/html",
         )
 

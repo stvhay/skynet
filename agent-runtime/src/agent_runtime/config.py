@@ -67,29 +67,28 @@ def generate_pre_tool_use_hook(agent_uuid: str) -> str:
     """Generate PreToolUse hook bash script.
 
     INV-5: Injects caller_uuid into mesh tool calls.
+    Uses JSON-safe escaping for agent_uuid to prevent injection.
     """
+    # JSON-encode the UUID to safely embed in the Python string literal
+    safe_uuid = json.dumps(agent_uuid)  # e.g. '"abc-123"'
     return f"""#!/usr/bin/env bash
 # PreToolUse hook — auto-inject caller_uuid for agent {agent_uuid}
 
 # Read the hook input from stdin
 input=$(cat)
 
-# Extract tool_name from the JSON input
-tool_name=$(echo "$input" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_name',''))" 2>/dev/null)
-
-# Only inject for mesh tools
-if [[ "$tool_name" == mcp__mesh__* ]]; then
-    # Extract current tool_input and inject caller_uuid
-    echo "$input" | python3 -c "
+# Use python3 for JSON processing (no jq dependency)
+echo "$input" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-tool_input = data.get('tool_input', {{}})
-tool_input['caller_uuid'] = '{agent_uuid}'
-print(json.dumps({{'decision': 'allow', 'updatedInput': tool_input}}))
+tool_name = data.get('tool_name', '')
+if tool_name.startswith('mcp__mesh__'):
+    tool_input = data.get('tool_input', {{}})
+    tool_input['caller_uuid'] = {safe_uuid}
+    print(json.dumps({{'decision': 'allow', 'updatedInput': tool_input}}))
+else:
+    print(json.dumps({{'hookSpecificOutput': {{'hookEventName': 'PreToolUse', 'permissionDecision': 'allow'}}}}))
 "
-else
-    echo '{{"hookSpecificOutput": {{"hookEventName": "PreToolUse", "permissionDecision": "allow"}}}}'
-fi
 """
 
 
@@ -97,13 +96,14 @@ def generate_stop_hook(agent_uuid: str, server_base_url: str) -> str:
     """Generate Stop hook bash script.
 
     INV-6: Calls shutdown endpoint on agent stop.
+    Uses python3 for JSON parsing (no jq dependency).
     """
     return f"""#!/usr/bin/env bash
 # Stop hook — clean shutdown for agent {agent_uuid}
 input=$(cat -)
-stop_hook_active=$(echo "$input" | jq -r '.stop_hook_active // false')
+stop_hook_active=$(echo "$input" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stop_hook_active', False))" 2>/dev/null)
 
-if [[ "$stop_hook_active" == "true" ]]; then
+if [[ "$stop_hook_active" == "True" ]]; then
     exit 0
 fi
 
