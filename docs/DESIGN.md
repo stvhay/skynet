@@ -48,11 +48,13 @@ The `from` field is auto-populated by the server from the authenticated caller i
 
 Returns a list of all registered agents: UUID, alive/dead status.
 
-### 5. `spawn_neighbor(caller_uuid, claude_md?) -> uuid`
+### 5. `spawn_neighbor(caller_uuid, claude_md?, model?, thinking_budget?) -> uuid`
 
 Registers a new agent in the mesh. Generates credentials (UUID, bearer token) and prepares the agent's data directory.
 
 - Optional `claude_md` parameter provides behavioral instructions for Claude agents.
+- Optional `model` parameter specifies the Claude model to use (e.g., `"opus-4"`, `"sonnet-4"`).
+- Optional `thinking_budget` parameter sets the extended thinking token budget for the spawned agent.
 - Returns the new agent's UUID so the spawner can send the first message.
 
 ### 6. `shutdown(caller_uuid)`
@@ -278,6 +280,20 @@ The controller connects to the MCP server via streamable-HTTP. The Web UI render
 - Send interface (select recipient, compose message)
 - Spawn interface (launch new agents with optional CLAUDE.md)
 
+### REST API
+
+The controller UI communicates with the mesh server via REST/SSE endpoints mounted on the same Starlette app:
+
+| Method | Path | Description |
+|---|---|---|
+| GET | /api/events | SSE stream of all events |
+| GET | /api/agents | List all agents |
+| POST | /api/send | Send message from controller |
+| POST | /api/spawn | Spawn agent with optional initial_message |
+| POST | /api/agents/{uuid}/shutdown | Deregister agent |
+| GET | /api/inbox | Read controller's inbox |
+| GET | / | Controller web UI |
+
 ## Security
 
 ### Bearer Token Authentication
@@ -348,8 +364,6 @@ The original design identified 8 open questions. Here are the resolutions adopte
 
 ## Future Work
 
-Three planned subsystems extend the mesh beyond the core server:
+The controller-ui and agent-runtime subsystems are now implemented in v0.2. The remaining planned subsystem:
 
-- **controller-ui** — Web UI for the human controller: real-time traffic monitoring, agent management dashboard, send/receive interface. Connects to mesh-server over streamable-HTTP.
-- **agent-runtime** — Agent bootstrap and lifecycle management: UUID assignment, MCP connection setup, credential injection, process supervision. Handles the mechanics of launching Claude CLI instances as mesh agents.
 - **channels** — XOR-derived filesystem channels for attachments and shared artifacts. Manages directory creation, cleanup policies, and access patterns for the `.mesh/channels/` tree.

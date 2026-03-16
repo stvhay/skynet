@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.session import ServerSession
 
+from mesh_server.api import create_api_routes
 from mesh_server.events import EventStore
 from mesh_server.projections import MeshState
 from mesh_server.spawner import prepare_spawn
@@ -20,6 +22,7 @@ from mesh_server.tools import (
     tool_shutdown,
     tool_whoami,
 )
+from mesh_server.types import AgentRegistered, generate_controller_uuid, uuid_kind
 
 
 @dataclass
@@ -27,12 +30,18 @@ class AppContext:
     store: EventStore
     state: MeshState
     mesh_dir: Path
+    controller_uuid: str
 
 
-@asynccontextmanager
-async def app_lifespan(server: FastMCP):
-    """Initialize event store and rebuild state from event log."""
-    mesh_dir = Path(os.environ.get("MESH_DIR", ".mesh"))
+def _init_app_context(mesh_dir: Path | None = None) -> AppContext:
+    """Create store, state, and controller identity.
+
+    Called once before the server starts. The same objects are used by both
+    MCP tool handlers (via lifespan context) and REST/SSE API routes.
+    """
+    if mesh_dir is None:
+        mesh_dir = Path(os.environ.get("MESH_DIR", ".mesh"))
+
     store = EventStore(mesh_dir / "events.jsonl")
     state = MeshState()
 
@@ -40,7 +49,43 @@ async def app_lifespan(server: FastMCP):
     for event in store.replay():
         state.apply(event)
 
-    yield AppContext(store=store, state=state, mesh_dir=mesh_dir)
+    # Only register controller if not already present from replay
+    existing_controller = None
+    for agent in state.list_all_agents():
+        if uuid_kind(agent.uuid) == "controller" and agent.alive:
+            existing_controller = agent.uuid
+            break
+
+    if existing_controller:
+        controller_uuid = existing_controller
+    else:
+        controller_uuid = generate_controller_uuid()
+        ctrl_event = AgentRegistered(
+            uuid=controller_uuid,
+            token_hash={},  # Controller doesn't need token auth
+            pid=os.getpid(),
+            timestamp=time.time(),
+        )
+        store.append(ctrl_event)
+        state.apply(ctrl_event)
+
+    return AppContext(
+        store=store, state=state, mesh_dir=mesh_dir, controller_uuid=controller_uuid
+    )
+
+
+# Holds the context created by create_app(), consumed by app_lifespan().
+_app_context: AppContext | None = None
+
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP):
+    """Yield the AppContext for MCP tool handlers."""
+    if _app_context is None:
+        raise RuntimeError(
+            "App context not initialized — call create_app() first"
+        )
+    yield _app_context
 
 
 mcp = FastMCP("mesh", lifespan=app_lifespan, json_response=True)
@@ -141,12 +186,16 @@ async def spawn_neighbor(
     caller_uuid: str,
     ctx: Ctx,
     claude_md: str | None = None,
+    model: str = "sonnet",
+    thinking_budget: int | None = None,
 ) -> dict:
     """Spawn a new agent in the mesh.
 
     Args:
         caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
         claude_md: Optional CLAUDE.md content defining the new agent's role
+        model: Model short name: "opus", "sonnet", or "haiku" (default: "sonnet")
+        thinking_budget: Optional thinking token budget (None = no extended thinking)
     """
     app = _get_app(ctx)
     result = prepare_spawn(
@@ -154,13 +203,50 @@ async def spawn_neighbor(
         app.store,
         mesh_dir=app.mesh_dir,
         claude_md=claude_md,
+        model=model,
+        thinking_budget=thinking_budget,
     )
     return result
 
 
+def create_app(mesh_dir: Path | None = None) -> object:
+    """Create the combined ASGI app with MCP + REST/SSE routes.
+
+    Initializes app context, registers API routes via FastMCP's public
+    custom_route decorator, and returns the Starlette application.
+    """
+    global _app_context
+    ctx = _init_app_context(mesh_dir)
+    _app_context = ctx
+
+    # Register REST/SSE routes via FastMCP's public custom_route API
+    api_routes = create_api_routes(
+        store=ctx.store,
+        state=ctx.state,
+        controller_uuid=ctx.controller_uuid,
+        mesh_dir=ctx.mesh_dir,
+    )
+    for route in api_routes:
+        mcp.custom_route(route.path, methods=route.methods)(route.endpoint)
+
+    return mcp.streamable_http_app()
+
+
 def run_server(host: str = "0.0.0.0", port: int = 9090) -> None:
-    """Start the MCP mesh server."""
-    mcp.run(transport="streamable-http", host=host, port=port)
+    """Start the MCP mesh server with REST/SSE API.
+
+    Binds to 0.0.0.0 by default so the server is accessible from
+    other containers and the host machine.
+    """
+    import uvicorn
+
+    app = create_app()
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
+    server = uvicorn.Server(config)
+
+    import anyio
+
+    anyio.run(server.serve)
 
 
 if __name__ == "__main__":

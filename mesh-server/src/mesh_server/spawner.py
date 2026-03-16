@@ -10,15 +10,16 @@ from mesh_server.events import EventStore
 from mesh_server.projections import MeshState
 from mesh_server.types import AgentRegistered, generate_agent_uuid
 
-MESH_AGENT_PREAMBLE = """\
-# Mesh Agent
+MODEL_MAP: dict[str, str] = {
+    "opus": "claude-opus-4-6",
+    "sonnet": "claude-sonnet-4-6",
+    "haiku": "claude-haiku-4-5-20251001",
+}
 
-You are a mesh agent. ALL communication happens via MCP mesh tools.
-NEVER prompt the terminal user. NEVER use AskUserQuestion.
-Use read_inbox(block=true) when you have no work to do.
-Your agent UUID is available in the MESH_AGENT_ID environment variable.
-Pass it as caller_uuid when calling mesh tools.
-"""
+
+def validate_model(model: str) -> str | None:
+    """Validate a model short name. Returns full model ID or None if invalid."""
+    return MODEL_MAP.get(model)
 
 
 def prepare_spawn(
@@ -28,12 +29,33 @@ def prepare_spawn(
     mesh_dir: Path,
     claude_md: str | None = None,
     pid: int | None = None,
+    model: str = "sonnet",
+    thinking_budget: int | None = None,
 ) -> dict:
     """Prepare credentials and directory for a new agent.
 
-    Returns a result dict with uuid, bearer_token, and env_vars.
+    Returns a result dict with uuid, bearer_token, env_vars, model,
+    thinking_budget, and agent_dir.
     Does NOT launch a subprocess — caller is responsible for that.
     """
+    # Validate model
+    full_model_id = validate_model(model)
+    if full_model_id is None:
+        valid = ", ".join(sorted(MODEL_MAP.keys()))
+        return {
+            "code": "invalid_args",
+            "data": {},
+            "error": f"Invalid model '{model}'. Valid models: {valid}",
+        }
+
+    # Validate thinking_budget
+    if thinking_budget is not None and thinking_budget < 1024:
+        return {
+            "code": "invalid_args",
+            "data": {},
+            "error": f"thinking_budget must be >= 1024, got {thinking_budget}",
+        }
+
     agent_uuid = generate_agent_uuid()
     raw_token = generate_token()
     token_hash = hash_token(raw_token)
@@ -52,11 +74,9 @@ def prepare_spawn(
     agent_dir = mesh_dir / "agents" / agent_uuid
     agent_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write claude.md
-    full_claude_md = MESH_AGENT_PREAMBLE
-    if claude_md:
-        full_claude_md += f"\n---\n\n{claude_md}\n"
-    (agent_dir / "claude.md").write_text(full_claude_md)
+    # Write CLAUDE.md (role-only; mesh behavior injected via hooks in agent-runtime)
+    role_text = claude_md or "General-purpose mesh agent."
+    (agent_dir / "CLAUDE.md").write_text(f"# Agent Role\n\n{role_text}\n")
 
     env_vars = {
         "MESH_AGENT_ID": agent_uuid,
@@ -70,6 +90,9 @@ def prepare_spawn(
             "uuid": agent_uuid,
             "bearer_token": raw_token,
             "env_vars": env_vars,
+            "model": full_model_id,
+            "thinking_budget": thinking_budget,
+            "agent_dir": str(agent_dir),
         },
         "error": None,
     }
