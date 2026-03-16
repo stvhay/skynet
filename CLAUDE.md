@@ -25,12 +25,11 @@ This project uses Nix flakes + direnv for reproducible environments:
 
 - `flake.nix` — Dev tooling (Python, linters, etc.)
 - `.envrc` — Loads flake and sources `.envrc.d/` and `.envrc.local.d/`
-- `.envrc.d/` — Tracked initialization scripts (beads, dolt auto-install)
+- `.envrc.d/` — Tracked initialization scripts (dolt auto-install)
 - `.envrc.local.d/` — Local-only initialization scripts (gitignored, e.g. Langfuse keys)
 
 ### Tools
 
-- **beads** (`bd`) — Used for context management. Auto-installed via `.envrc.d/beads.sh`.
 - **dolt** — Version-controlled database. Auto-installed via `.envrc.d/dolt.sh`.
 
 ```bash
@@ -63,7 +62,7 @@ All changes follow the dev-workflow-toolkit process:
 1. File a GitHub issue
 2. Create a branch (`/using-git-worktrees`)
 3. Brainstorm (`/brainstorming`)
-4. Write a plan (`/writing-plans` → `docs/plans/`)
+4. Write a plan (`/writing-plans` → `~/.claude/plans/`)
 5. Execute (`/executing-plans`)
 6. Verify (`/verification-before-completion`)
 7. Self-review (`/requesting-code-review`)
@@ -78,7 +77,6 @@ All changes follow the dev-workflow-toolkit process:
 ## Key Paths
 
 - `chat-bridge/` — Preliminary design document and prototypes
-- `docs/plans/` — Implementation plans
 - `.github/` — Issue and PR templates
 - `README.md` — Project overview and quick start
 - `docs/DESIGN.md` — Protocol specification

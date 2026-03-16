@@ -1,7 +1,0 @@
-{
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "server",
-  "dolt_database": "skynet",
-  "project_id": "81ee8ba3-52b5-42a9-9d57-7cbabfc8493c"
-}

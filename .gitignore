@@ -13,6 +13,10 @@ __pycache__/
 dist/
 build/
 
+# Claude Code
+.claude/
+MEMORY.md
+
 # Mesh runtime
 .mesh/
 
@@ -29,7 +33,7 @@ build/
 .DS_Store
 Thumbs.db
 
-# Dolt database files (added by bd init)
+# Dolt database files (auto-installed via .envrc.d/dolt.sh)
 .dolt/
 *.db
 .issue
