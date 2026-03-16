@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.session import ServerSession
 
+from agent_runtime.launcher import AgentSupervisor
 from mesh_server.api import create_api_routes
 from mesh_server.events import EventStore
 from mesh_server.projections import MeshState
@@ -31,6 +35,7 @@ class AppContext:
     state: MeshState
     mesh_dir: Path
     controller_uuid: str
+    supervisor: AgentSupervisor | None = None
 
 
 def _init_app_context(mesh_dir: Path | None = None) -> AppContext:
@@ -206,6 +211,25 @@ async def spawn_neighbor(
         model=model,
         thinking_budget=thinking_budget,
     )
+
+    if result["code"] == "ok" and app.supervisor is not None:
+        try:
+            d = result["data"]
+            await app.supervisor.launch(
+                uuid=d["uuid"],
+                model=d["model"],
+                agent_dir=d["agent_dir"],
+                bearer_token=d["bearer_token"],
+                spawner_uuid=caller_uuid,
+                server_url="http://127.0.0.1:9090/mcp",
+                server_base_url="http://127.0.0.1:9090",
+                role=claude_md,
+                thinking_budget=d.get("thinking_budget"),
+            )
+        except Exception:
+            logger.exception("Failed to launch agent via supervisor")
+            result["launch_error"] = "supervisor launch failed"
+
     return result
 
 
@@ -217,6 +241,18 @@ def create_app(mesh_dir: Path | None = None) -> object:
     """
     global _app_context
     ctx = _init_app_context(mesh_dir)
+
+    async def _on_agent_exit(uuid: str, exit_code: int) -> None:
+        """Deregister agent when its process exits without explicit shutdown."""
+        agent = ctx.state.get_agent(uuid)
+        if agent and agent.alive:
+            logger.info(
+                "Agent %s exited with code %d, deregistering", uuid, exit_code
+            )
+            tool_shutdown(ctx.state, ctx.store, caller_uuid=uuid)
+
+    supervisor = AgentSupervisor(shutdown_callback=_on_agent_exit)
+    ctx.supervisor = supervisor
     _app_context = ctx
 
     # Register REST/SSE routes via FastMCP's public custom_route API
@@ -225,6 +261,7 @@ def create_app(mesh_dir: Path | None = None) -> object:
         state=ctx.state,
         controller_uuid=ctx.controller_uuid,
         mesh_dir=ctx.mesh_dir,
+        agent_supervisor=supervisor,
     )
     for route in api_routes:
         mcp.custom_route(route.path, methods=route.methods)(route.endpoint)

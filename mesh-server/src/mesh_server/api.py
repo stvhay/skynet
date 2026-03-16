@@ -149,7 +149,18 @@ def create_api_routes(
         # Launch via supervisor if available
         if agent_supervisor is not None:
             try:
-                await agent_supervisor.launch(**result["data"])
+                d = result["data"]
+                await agent_supervisor.launch(
+                    uuid=d["uuid"],
+                    model=d["model"],
+                    agent_dir=d["agent_dir"],
+                    bearer_token=d["bearer_token"],
+                    spawner_uuid=controller_uuid,
+                    server_url="http://127.0.0.1:9090/mcp",
+                    server_base_url="http://127.0.0.1:9090",
+                    role=body.get("claude_md"),
+                    thinking_budget=d.get("thinking_budget"),
+                )
             except Exception:
                 logger.exception("Failed to launch agent via supervisor")
 
