@@ -417,6 +417,10 @@ button:active { background: var(--border); }
   function renderEvent(event) {
     allEvents.push(event);
     const body = document.getElementById('event-log-body');
+    if (allEvents.length > 1000) {
+      allEvents.shift();
+      if (body.firstChild) body.removeChild(body.firstChild);
+    }
     const row = document.createElement('div');
     row.className = 'event-row';
 
@@ -424,12 +428,12 @@ button:active { background: var(--border); }
     switch (event.type) {
       case 'AgentRegistered':
         icon = '\u25cf'; // filled circle
-        text = `${shortId(nodeIdFor(event.uuid))} registered${event.pid ? ' (pid ' + event.pid + ')' : ''}`;
+        text = `${shortId(nodeIdFor(event.uuid))} registered${event.pid ? ' (pid ' + escapeHtml(String(event.pid)) + ')' : ''}`;
         typeClass = 'event-register';
         break;
       case 'AgentDeregistered':
         icon = '\u2715'; // multiplication sign
-        text = `${shortId(nodeIdFor(event.uuid))} shutdown (${event.reason || 'unknown'})`;
+        text = `${shortId(nodeIdFor(event.uuid))} shutdown (${escapeHtml(event.reason || 'unknown')})`;
         typeClass = 'event-deregister';
         break;
       case 'MessageEnqueued':
