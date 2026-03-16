@@ -258,9 +258,6 @@ button:active { background: var(--border); }
 .form-group { margin-bottom: 2px; }
 
 /* SVG styles */
-.node-glow {
-  filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.4));
-}
 
 .link-line {
   fill: none;
@@ -362,7 +359,7 @@ button:active { background: var(--border); }
 }
 
 .inbox-badge {
-  fill: var(--status-red);
+  fill: #fff;
   font-size: 9px;
   font-family: var(--font-ui);
   font-weight: 700;
@@ -1067,7 +1064,7 @@ button:active { background: var(--border); }
     updateGraph();
     pulseLink(link);
 
-    if (selectedNode) selectNode(selectedNode);
+    if (selectedNode && !selectedNode.isController) selectNode(selectedNode);
     else if (selectedLink) selectLink(selectedLink);
   }
 
