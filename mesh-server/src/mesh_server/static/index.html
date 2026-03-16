@@ -1001,7 +1001,7 @@ button:active { background: var(--border); }
   }
 
   // --- Agent management ---
-  function addAgent(uuid, alive, pid) {
+  function addAgent(uuid, alive, pid, timestamp) {
     const nid = nodeIdFor(uuid);
     if (agentMap.has(nid)) {
       const existing = agentMap.get(nid);
@@ -1017,7 +1017,7 @@ button:active { background: var(--border); }
       pid: pid,
       isController: nid === CONTROLLER_ID,
       lastActivityTime: Date.now(),
-      registeredAt: Date.now() / 1000
+      registeredAt: timestamp || Date.now() / 1000
     };
     nodes.push(node);
     agentMap.set(nid, node);
@@ -1128,7 +1128,7 @@ button:active { background: var(--border); }
 
     switch (event.type) {
       case 'AgentRegistered':
-        addAgent(event.uuid, true, event.pid);
+        addAgent(event.uuid, true, event.pid, event.timestamp);
         updateGraph();
         break;
       case 'AgentDeregistered':
@@ -1298,7 +1298,7 @@ button:active { background: var(--border); }
       const res = await fetch('/api/agents');
       const json = await res.json();
       const agents = json.data?.neighbors || json.agents || [];
-      agents.forEach(a => addAgent(a.uuid, a.alive, a.pid));
+      agents.forEach(a => addAgent(a.uuid, a.alive, a.pid, a.registered_at));
     } catch (err) {
       console.error('Failed to fetch agents:', err);
     }
