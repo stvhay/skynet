@@ -62,7 +62,7 @@ All changes follow the dev-workflow-toolkit process:
 1. File a GitHub issue
 2. Create a branch (`/using-git-worktrees`)
 3. Brainstorm (`/brainstorming`)
-4. Write a plan (`/writing-plans` → `~/.claude/plans/`)
+4. Write a plan (`/writing-plans`)
 5. Execute (`/executing-plans`)
 6. Verify (`/verification-before-completion`)
 7. Self-review (`/requesting-code-review`)

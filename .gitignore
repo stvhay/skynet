@@ -13,8 +13,9 @@ __pycache__/
 dist/
 build/
 
-# Claude Code
-.claude/
+# Claude Code (track settings.json via negation)
+.claude/*
+!.claude/settings.json
 MEMORY.md
 
 # Mesh runtime
