@@ -6,7 +6,6 @@ performs the operation, and returns a result dict.
 
 from __future__ import annotations
 
-import asyncio
 import time
 import uuid as uuid_mod
 

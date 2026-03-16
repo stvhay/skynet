@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install and test mesh-server
+        run: |
+          cd mesh-server && uv sync --all-extras
+          uv run pytest
+
+      - name: Lint
+        run: |
+          uv tool run ruff check .
+          uv tool run ruff format --check .
+
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check bump label matches changelog
+        run: |
+          # Extract bump type from changelog
+          CHANGELOG_BUMP=$(grep -oP '<!--\s*bump:\s*\K(patch|minor|major)' CHANGELOG.md || true)
+
+          # Extract bump label from PR
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' 2>/dev/null || true)
+          PR_BUMP=$(echo "$PR_LABELS" | grep -oP '^bump:\K.*' || true)
+
+          if [ -n "$CHANGELOG_BUMP" ] && [ -n "$PR_BUMP" ]; then
+            if [ "$CHANGELOG_BUMP" != "$PR_BUMP" ]; then
+              echo "::error::Changelog bump ($CHANGELOG_BUMP) does not match PR label bump ($PR_BUMP)"
+              exit 1
+            fi
+          fi
+
+          echo "Version check passed (changelog: ${CHANGELOG_BUMP:-none}, label: ${PR_BUMP:-none})"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

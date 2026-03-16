@@ -1,13 +1,9 @@
 """Tests for in-memory projections."""
 
-import asyncio
 import time
-
-import pytest
 
 from mesh_server.projections import MeshState
 from mesh_server.types import (
-    BROADCAST_UUID,
     AgentDeregistered,
     AgentRegistered,
     AgentState,
@@ -19,7 +15,14 @@ from mesh_server.types import (
 def _reg(uuid: str = "agent-1", pid: int = 100) -> AgentRegistered:
     return AgentRegistered(
         uuid=uuid,
-        token_hash={"scheme": "scrypt", "salt": "aa", "hash": "bb", "n": 16384, "r": 8, "p": 1},
+        token_hash={
+            "scheme": "scrypt",
+            "salt": "aa",
+            "hash": "bb",
+            "n": 16384,
+            "r": 8,
+            "p": 1,
+        },
         pid=pid,
         timestamp=time.time(),
     )

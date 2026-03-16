@@ -7,19 +7,18 @@ import sys
 import time
 
 COLORS = {
-    "AgentRegistered": "\033[32m",   # green
-    "AgentDeregistered": "\033[31m", # red
-    "MessageEnqueued": "\033[36m",   # cyan
-    "MessageDrained": "\033[33m",    # yellow
+    "AgentRegistered": "\033[32m",  # green
+    "AgentDeregistered": "\033[31m",  # red
+    "MessageEnqueued": "\033[36m",  # cyan
+    "MessageDrained": "\033[33m",  # yellow
 }
 RESET = "\033[0m"
 DIM = "\033[2m"
 
+
 def fmt(e):
     t = e["type"]
     c = COLORS.get(t, "")
-    ts = time.strftime("%H:%M:%S", time.localtime(e.get("timestamp", 0)))
-
     if t == "AgentRegistered":
         return f"{c}+ REGISTER{RESET}  {e['uuid'][:12]}"
     elif t == "AgentDeregistered":
@@ -33,6 +32,7 @@ def fmt(e):
         return f"{DIM}  drained{RESET}"
     else:
         return f"  {t}: {json.dumps(e)[:80]}"
+
 
 def tail(path):
     # Print existing events
@@ -54,6 +54,7 @@ def tail(path):
                 print(f"{DIM}{ts}{RESET} {fmt(e)}")
             else:
                 time.sleep(0.2)
+
 
 if __name__ == "__main__":
     path = sys.argv[1] if len(sys.argv) > 1 else ".mesh/events.jsonl"

@@ -94,9 +94,7 @@ def mesh_dir(tmp_path):
     return tmp_path / "mesh"
 
 
-async def test_inv31_mock_cli_full_cycle(
-    store, state, controller_uuid, mesh_dir
-):
+async def test_inv31_mock_cli_full_cycle(store, state, controller_uuid, mesh_dir):
     """Full lifecycle: spawn agent with fake CLI, verify shutdown."""
     import uvicorn
     from starlette.applications import Starlette

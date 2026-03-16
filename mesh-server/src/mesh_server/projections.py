@@ -78,9 +78,7 @@ class MeshState:
 
     def _apply_drained(self, event: MessageDrained) -> None:
         inbox = self._inboxes.get(event.by_uuid, [])
-        self._inboxes[event.by_uuid] = [
-            m for m in inbox if m.id != event.message_id
-        ]
+        self._inboxes[event.by_uuid] = [m for m in inbox if m.id != event.message_id]
 
     # --- Query methods ---
 

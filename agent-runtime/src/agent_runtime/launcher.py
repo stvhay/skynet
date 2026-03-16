@@ -5,9 +5,9 @@ import logging
 import os
 import subprocess
 
-logger = logging.getLogger(__name__)
-
 from agent_runtime.config import write_agent_configs
+
+logger = logging.getLogger(__name__)
 
 
 class AgentProcess:
@@ -58,7 +58,9 @@ class AgentProcess:
 
         INV-4: Model names translate to correct CLI flags.
         """
-        mcp_config_path = os.path.join(os.path.abspath(self._agent_dir), "mcp_config.json")
+        mcp_config_path = os.path.join(
+            os.path.abspath(self._agent_dir), "mcp_config.json"
+        )
 
         # Pre-approve all mesh MCP tools so the agent doesn't block on permissions
         mesh_tools = [

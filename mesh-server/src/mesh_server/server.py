@@ -89,9 +89,7 @@ _app_context: AppContext | None = None
 async def app_lifespan(server: FastMCP):
     """Yield the AppContext for MCP tool handlers."""
     if _app_context is None:
-        raise RuntimeError(
-            "App context not initialized — call create_app() first"
-        )
+        raise RuntimeError("App context not initialized — call create_app() first")
     yield _app_context
 
 
@@ -217,7 +215,10 @@ async def spawn_neighbor(
     )
 
     pid = await launch_agent(
-        app.supervisor, result, caller_uuid, role=claude_md,
+        app.supervisor,
+        result,
+        caller_uuid,
+        role=claude_md,
         server_url=f"{app.server_base_url}/mcp",
         server_base_url=app.server_base_url,
         initial_prompt=initial_prompt,
@@ -248,9 +249,7 @@ def create_app(
         """Deregister agent when its process exits without explicit shutdown."""
         agent = ctx.state.get_agent(uuid)
         if agent and agent.alive:
-            logger.info(
-                "Agent %s exited with code %d, deregistering", uuid, exit_code
-            )
+            logger.info("Agent %s exited with code %d, deregistering", uuid, exit_code)
             tool_shutdown(ctx.state, ctx.store, caller_uuid=uuid)
 
     supervisor = AgentSupervisor(shutdown_callback=_on_agent_exit)
