@@ -33,8 +33,9 @@ def main():
 
     # Send reply if prompt was given
     if args.prompt:
+        spawner_uuid = os.environ.get("MESH_SPAWNER_UUID", "controller")
         data = json.dumps({
-            "to": "controller",
+            "to": spawner_uuid,
             "message": f"fake-agent-reply: {agent_uuid} processed prompt",
         }).encode()
         req = urllib.request.Request(

@@ -149,6 +149,7 @@ def create_api_routes(
             return JSONResponse(result, status_code=400)
 
         # Launch via supervisor if available
+        initial_message = body.get("initial_message")
         pid = await launch_agent(
             agent_supervisor,
             result,
@@ -156,12 +157,12 @@ def create_api_routes(
             role=body.get("claude_md"),
             server_url=f"{server_base_url}/mcp",
             server_base_url=server_base_url,
+            initial_prompt=initial_message,
         )
         if pid is None and agent_supervisor is not None:
             result["data"]["launch_error"] = "supervisor launch failed"
 
-        # Auto-send initial_message if provided
-        initial_message = body.get("initial_message")
+        # Also send initial_message to inbox so the agent can read it via mesh tools
         if initial_message:
             new_uuid = result["data"]["uuid"]
             tool_send(

@@ -35,6 +35,32 @@ uv run mesh-server
 # Open http://localhost:9090
 ```
 
+## Subsystems
+
+| Subsystem | Path | Purpose |
+|-----------|------|---------|
+| mesh-server | `mesh-server/` | Singleton MCP server: message routing, agent lifecycle, event store |
+| controller-ui | `mesh-server/src/mesh_server/static/` | Web UI for traffic monitoring, agent management, send/receive |
+| agent-runtime | `agent-runtime/` | Agent bootstrap, UUID assignment, MCP connection, lifecycle |
+| channels | *(planned)* | XOR-derived filesystem channels for attachments and shared artifacts |
+
+## Development
+
+```bash
+# Environment setup (requires Nix + direnv)
+direnv allow
+
+# Build
+cd mesh-server && uv sync
+
+# Test
+cd mesh-server && uv run pytest
+
+# Lint
+ruff check .
+ruff format --check .
+```
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — System structure, subsystem boundaries, technology decisions

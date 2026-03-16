@@ -6,6 +6,7 @@ INV-31: Mock CLI agent completes full spawn->connect->message->shutdown cycle.
 from __future__ import annotations
 
 import asyncio
+import socket
 import sys
 import time
 from pathlib import Path
@@ -115,31 +116,13 @@ async def test_inv31_mock_cli_full_cycle(
 
     supervisor = FakeAgentSupervisor(shutdown_callback=_on_agent_exit)
 
-    # Use port=0 for random available port
-    # We need to start the server first to know the port, then pass it to routes
-    # Use a two-phase approach: create server, get port, then set up routes
+    # Reserve a free port atomically, then use it for the real server
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
 
-    # Phase 1: create a temporary app to bind the socket
-    tmp_app = Starlette(routes=[])
-    config = uvicorn.Config(tmp_app, host="127.0.0.1", port=0, log_level="warning")
-    server = uvicorn.Server(config)
-
-    # Start server to bind socket
-    server_task = asyncio.create_task(server.serve())
-
-    # Wait for server to start
-    for _ in range(50):
-        await asyncio.sleep(0.1)
-        if server.started:
-            break
-    assert server.started, "Server failed to start"
-
-    port = server.servers[0].sockets[0].getsockname()[1]
     base_url = f"http://127.0.0.1:{port}"
-
-    # Phase 2: now create the real app with the correct base URL
-    server.should_exit = True
-    await server_task
 
     routes = create_api_routes(
         store=store,
@@ -159,7 +142,7 @@ async def test_inv31_mock_cli_full_cycle(
         await asyncio.sleep(0.1)
         if server.started:
             break
-    assert server.started, "Server failed to start on second attempt"
+    assert server.started, "Server failed to start"
 
     try:
         async with httpx.AsyncClient(base_url=base_url) as client:

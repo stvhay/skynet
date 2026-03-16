@@ -1,5 +1,7 @@
 # Live Integration Implementation Plan
 
+> **Status:** Completed — all tasks executed and verified.
+
 **Issue:** #10 — Live integration: launch real Claude CLI agents through mesh
 **Beads:** skynet-5tj
 **Design:** docs/plans/2026-03-16-live-integration-design.md
