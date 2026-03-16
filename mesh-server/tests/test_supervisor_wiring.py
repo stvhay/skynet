@@ -15,6 +15,8 @@ from starlette.applications import Starlette
 from mesh_server.api import create_api_routes
 from mesh_server.events import EventStore
 from mesh_server.projections import MeshState
+from mesh_server.spawner import prepare_spawn
+from mesh_server.tools import tool_shutdown
 from mesh_server.types import AgentRegistered, generate_controller_uuid
 
 
@@ -102,3 +104,62 @@ async def test_inv29_rest_spawn_works_without_supervisor(
     data = resp.json()
     assert data["code"] == "ok"
     assert "uuid" in data["data"]
+
+
+async def test_inv30_supervisor_deregisters_on_crash(
+    store, state, controller_uuid, mesh_dir
+):
+    """Shutdown callback emits AgentDeregistered for alive agent."""
+    # Register controller first
+    ctrl_event = AgentRegistered(
+        uuid=controller_uuid, token_hash={}, pid=None, timestamp=time.time()
+    )
+    store.append(ctrl_event)
+    state.apply(ctrl_event)
+
+    # Register an agent via prepare_spawn
+    result = prepare_spawn(state, store, mesh_dir=mesh_dir, model="sonnet")
+    agent_uuid = result["data"]["uuid"]
+    assert state.get_agent(agent_uuid).alive is True
+
+    # Simulate the shutdown callback
+    async def _on_agent_exit(uuid: str, exit_code: int) -> None:
+        agent = state.get_agent(uuid)
+        if agent and agent.alive:
+            tool_shutdown(state, store, caller_uuid=uuid)
+
+    await _on_agent_exit(agent_uuid, exit_code=1)
+
+    # Agent should now be dead
+    assert state.get_agent(agent_uuid).alive is False
+
+
+async def test_inv30_no_double_deregister(
+    store, state, controller_uuid, mesh_dir
+):
+    """Shutdown callback skips already-dead agents (Stop hook already called)."""
+    # Register controller
+    ctrl_event = AgentRegistered(
+        uuid=controller_uuid, token_hash={}, pid=None, timestamp=time.time()
+    )
+    store.append(ctrl_event)
+    state.apply(ctrl_event)
+
+    # Register and manually shut down
+    result = prepare_spawn(state, store, mesh_dir=mesh_dir, model="sonnet")
+    agent_uuid = result["data"]["uuid"]
+    tool_shutdown(state, store, caller_uuid=agent_uuid)
+    assert state.get_agent(agent_uuid).alive is False
+
+    events_before = len(store.replay())
+
+    # Callback should be a no-op
+    async def _on_agent_exit(uuid: str, exit_code: int) -> None:
+        agent = state.get_agent(uuid)
+        if agent and agent.alive:
+            tool_shutdown(state, store, caller_uuid=uuid)
+
+    await _on_agent_exit(agent_uuid, exit_code=0)
+
+    events_after = len(store.replay())
+    assert events_after == events_before  # No new events
