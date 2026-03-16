@@ -26,6 +26,7 @@ from mesh_server.tools import (
     tool_shutdown,
     tool_whoami,
 )
+from mesh_server.launch import launch_agent
 from mesh_server.types import AgentRegistered, generate_controller_uuid, uuid_kind
 
 
@@ -212,23 +213,11 @@ async def spawn_neighbor(
         thinking_budget=thinking_budget,
     )
 
-    if result["code"] == "ok" and app.supervisor is not None:
-        try:
-            d = result["data"]
-            await app.supervisor.launch(
-                uuid=d["uuid"],
-                model=d["model"],
-                agent_dir=d["agent_dir"],
-                bearer_token=d["bearer_token"],
-                spawner_uuid=caller_uuid,
-                server_url="http://127.0.0.1:9090/mcp",
-                server_base_url="http://127.0.0.1:9090",
-                role=claude_md,
-                thinking_budget=d.get("thinking_budget"),
-            )
-        except Exception:
-            logger.exception("Failed to launch agent via supervisor")
-            result["launch_error"] = "supervisor launch failed"
+    pid = await launch_agent(
+        app.supervisor, result, caller_uuid, role=claude_md,
+    )
+    if pid is None and result["code"] == "ok" and app.supervisor is not None:
+        result["data"]["launch_error"] = "supervisor launch failed"
 
     return result
 

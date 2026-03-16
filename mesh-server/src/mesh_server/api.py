@@ -18,6 +18,7 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from mesh_server.events import EventStore
+from mesh_server.launch import launch_agent
 from mesh_server.projections import MeshState
 from mesh_server.spawner import prepare_spawn
 from mesh_server.tools import (
@@ -148,22 +149,16 @@ def create_api_routes(
             return JSONResponse(result, status_code=400)
 
         # Launch via supervisor if available
-        if agent_supervisor is not None:
-            try:
-                d = result["data"]
-                await agent_supervisor.launch(
-                    uuid=d["uuid"],
-                    model=d["model"],
-                    agent_dir=d["agent_dir"],
-                    bearer_token=d["bearer_token"],
-                    spawner_uuid=controller_uuid,
-                    server_url=f"{server_base_url}/mcp",
-                    server_base_url=server_base_url,
-                    role=body.get("claude_md"),
-                    thinking_budget=d.get("thinking_budget"),
-                )
-            except Exception:
-                logger.exception("Failed to launch agent via supervisor")
+        pid = await launch_agent(
+            agent_supervisor,
+            result,
+            controller_uuid,
+            role=body.get("claude_md"),
+            server_url=f"{server_base_url}/mcp",
+            server_base_url=server_base_url,
+        )
+        if pid is None and agent_supervisor is not None:
+            result["data"]["launch_error"] = "supervisor launch failed"
 
         # Auto-send initial_message if provided
         initial_message = body.get("initial_message")
