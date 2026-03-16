@@ -512,6 +512,7 @@ button:active { background: var(--border); }
   let unreadCount = 0;
   let activeTab = 'detail'; // 'detail' or 'inbox'
   let uptimeInterval = null;
+  let inboxFetching = false;
 
   // --- Helpers ---
   function shortId(uuid) {
@@ -941,6 +942,9 @@ button:active { background: var(--border); }
     selectedLink = null;
     if (uptimeInterval) { clearInterval(uptimeInterval); uptimeInterval = null; }
 
+    if (inboxFetching) return;
+    inboxFetching = true;
+
     const body = document.getElementById('detail-body');
     body.innerHTML = '<div class="detail-empty">Loading inbox...</div>';
 
@@ -957,11 +961,13 @@ button:active { background: var(--border); }
         return;
       }
 
-      const sorted = [...inboxMessages].sort((a, b) => b.timestamp - a.timestamp);
+      const sorted = [...inboxMessages].sort((m1, m2) => m2.timestamp - m1.timestamp);
       body.innerHTML = renderMessageList(sorted);
     } catch (err) {
       body.innerHTML = '<div class="detail-empty">Failed to load inbox</div>';
       console.error('Inbox fetch failed:', err);
+    } finally {
+      inboxFetching = false;
     }
   }
 
