@@ -413,8 +413,8 @@ button:active { background: var(--border); }
   </div>
   <div id="detail-panel">
     <div class="detail-tabs" role="tablist" aria-label="Detail panel">
-      <button class="detail-tab active" role="tab" aria-selected="true" id="tab-detail" aria-controls="tabpanel-detail">Detail</button>
-      <button class="detail-tab" role="tab" aria-selected="false" id="tab-inbox" aria-controls="tabpanel-inbox">Inbox</button>
+      <button class="detail-tab active" role="tab" aria-selected="true" id="tab-detail" aria-controls="detail-body">Detail</button>
+      <button class="detail-tab" role="tab" aria-selected="false" id="tab-inbox" aria-controls="detail-body">Inbox</button>
     </div>
     <div class="panel-body" id="detail-body" role="tabpanel" aria-labelledby="tab-detail">
       <div class="detail-empty">Click a node or edge to inspect</div>
@@ -921,6 +921,7 @@ button:active { background: var(--border); }
 
     try {
       const res = await fetch('/api/inbox');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       inboxMessages = json.data?.messages || [];
       unreadCount = 0;
@@ -966,10 +967,12 @@ button:active { background: var(--border); }
   function updateTabState() {
     const tabDetail = document.getElementById('tab-detail');
     const tabInbox = document.getElementById('tab-inbox');
+    const body = document.getElementById('detail-body');
     tabDetail.classList.toggle('active', activeTab === 'detail');
     tabDetail.setAttribute('aria-selected', String(activeTab === 'detail'));
     tabInbox.classList.toggle('active', activeTab === 'inbox');
     tabInbox.setAttribute('aria-selected', String(activeTab === 'inbox'));
+    body.setAttribute('aria-labelledby', activeTab === 'inbox' ? 'tab-inbox' : 'tab-detail');
   }
 
   // --- Agent management ---
