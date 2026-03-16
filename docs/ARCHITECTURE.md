@@ -15,7 +15,7 @@ For protocol details, see [DESIGN.md](DESIGN.md).
 | Subsystem | Purpose | Status | Spec |
 |-----------|---------|--------|------|
 | [mesh-server](../mesh-server/) | Message routing, agent lifecycle, event store | v0.2 | [SPEC.md](../mesh-server/SPEC.md) |
-| [controller-ui](../mesh-server/src/mesh_server/static/) | Web UI for human controller | v0.2 | — |
+| [controller-ui](../mesh-server/src/mesh_server/static/) | Web UI for human controller | v0.3 | — |
 | [agent-runtime](../agent-runtime/) | Agent bootstrap and lifecycle management | v0.3 | [SPEC.md](../agent-runtime/SPEC.md) |
 | channels | XOR-derived filesystem channels | Planned | — |
 
@@ -136,6 +136,24 @@ In the context of needing browser-accessible endpoints for the controller UI, fa
 | POST | /api/agents/{uuid}/shutdown | Deregister agent |
 | GET | /api/inbox | Read controller's inbox |
 | GET | / | Controller web UI |
+
+## Controller UI Design
+
+In the context of needing a monitoring dashboard for active mesh sessions, facing the choice between a framework-based SPA or vanilla JS, we decided to keep the single-file vanilla JS + D3.js v7 approach to maintain zero-build-step simplicity, accepting the trade-off of manual DOM management at scale.
+
+### Design Direction
+
+Precision & Density blended with Data & Analysis. Dark theme (`#1a1a2e`), cyan accent (`#00d4ff`), borders-only depth, monospace for all data values, 4px spacing grid. WCAG AA required for all readable text and interactive elements.
+
+### Panel Layout
+
+| Panel | Position | Content |
+|-------|----------|---------|
+| Header | Top | Title, SSE connection status |
+| Graph | Center | D3 force-directed visualization with recency fade, volume-weighted edges, 3-state nodes |
+| Event Log | Bottom-left | All events, color-coded + icon-prefixed, auto-tailing with pause-on-scroll |
+| Detail Panel | Bottom-right | Context-sensitive: node detail, edge messages, or controller inbox |
+| Sidebar | Right | Spawn and send controls |
 
 ## Hook Architecture
 

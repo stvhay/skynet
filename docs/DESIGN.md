@@ -275,10 +275,12 @@ The controller (human user) participates as a privileged peer.
 
 The controller connects to the MCP server via streamable-HTTP. The Web UI renders:
 
-- Live message feed (all traffic or filtered by agent)
-- Agent status dashboard (UUIDs, PIDs, health, current activity)
-- Send interface (select recipient, compose message)
-- Spawn interface (launch new agents with optional CLAUDE.md)
+- **Event log** — all events (register, deregister, message, drain) in a scrollable auto-tailing panel with color + icon coding
+- **Graph visualization** — force-directed D3 graph with recency-fading edges (30s), volume-weighted edge thickness, 3-state nodes (active/idle/dead), hover tooltips
+- **Node detail panel** — click a node to see UUID, PID, uptime, state, message sub-transcript, and shutdown button
+- **Controller inbox** — badge on controller node + dedicated panel for messages addressed to controller, with unread tracking
+- **Send interface** — select recipient, compose message
+- **Spawn interface** — launch new agents with model, thinking budget, role, initial message
 
 ### REST API
 
