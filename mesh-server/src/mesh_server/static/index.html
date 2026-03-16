@@ -581,10 +581,11 @@ button:active { background: var(--border); }
         tooltip.style.display = 'none';
       });
 
+    const maxCount = Math.max(1, ...links.map(l => l.count));
+
     linkSel.merge(linkEnter)
       .attr('stroke-width', d => Math.min(1 + Math.log2(d.count + 1) * 1.5, 6))
       .attr('stroke', d => {
-        const maxCount = Math.max(1, ...links.map(l => l.count));
         return edgeColorScale(d.count / maxCount);
       })
       .attr('marker-end', 'url(#arrow)');
@@ -999,10 +1000,9 @@ button:active { background: var(--border); }
         }
       });
 
-    requestAnimationFrame(updateRecency);
   }
 
-  requestAnimationFrame(updateRecency);
+  setInterval(updateRecency, 1000);
 
   // --- Init ---
   async function init() {
