@@ -68,11 +68,30 @@ All changes follow the dev-workflow-toolkit process:
 7. Self-review (`/requesting-code-review`)
 8. PR and finish (`/finishing-a-development-branch`)
 
+## Work Tracking
+
+Use `bd` (beads) for all work tracking: `bd status`, `bd log`, `bd link`.
+
 ## Conventions
 
 - Vertical Slice Architecture: organize by feature/subsystem, not by technical layer
 - Each subsystem gets a `SPEC.md` with invariants, failure modes, and public interface
 - Test names encode spec item IDs: `test_inv1_description()`, `test_fail2_description()`
+
+## Writing Standards
+
+- Structured and dense — no filler words, no preamble
+- Lead with the answer or action, not the reasoning
+- Prefer short, direct sentences over long explanations
+- Use markdown formatting for readability (headers, lists, tables, code blocks)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution workflow.
+
+## Lessons Learned
+
+- **Documentation gate**: `finishing-a-development-branch` validates that docs/ARCHITECTURE.md and docs/DESIGN.md reflect current state before PR creation. Do not skip this step.
 
 ## Key Paths
 

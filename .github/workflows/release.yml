@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: version-bump
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check for unreleased changes
+        id: check
+        run: |
+          if grep -q '## Unreleased' CHANGELOG.md; then
+            echo "has_unreleased=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_unreleased=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump version
+        if: steps.check.outputs.has_unreleased == 'true'
+        id: bump
+        run: |
+          ./compute-version.sh --ci --update | tee /tmp/bump-output.txt
+          VERSION=$(grep '^bump:' /tmp/bump-output.txt | sed 's/.*-> //')
+          echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract changelog
+        if: steps.check.outputs.has_unreleased == 'true'
+        id: changelog
+        run: |
+          # Extract content between first ## vX.Y.Z and next ## heading
+          awk '/^## v/{if(found)exit; found=1; next} found' CHANGELOG.md > /tmp/release-notes.md
+
+      - name: Commit and tag
+        if: steps.check.outputs.has_unreleased == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: ${{ steps.bump.outputs.version }}"
+          TAG="$(date -u +%Y-%m-%dT%H%M%SZ)"
+          git tag "$TAG"
+          git push origin main --tags
+
+      - name: Create GitHub release
+        if: steps.check.outputs.has_unreleased == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="$(git describe --tags --abbrev=0)"
+          gh release create "$TAG" \
+            --title "${{ steps.bump.outputs.version }}" \
+            --notes-file /tmp/release-notes.md
