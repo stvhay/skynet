@@ -268,6 +268,13 @@ button:active { background: var(--border); }
   stroke: var(--status-green);
 }
 
+.pulse-ring {
+  fill: none;
+  stroke: var(--status-green);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
 .node-label {
   font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
   font-size: 11px;
@@ -371,6 +378,8 @@ button:active { background: var(--border); }
 
   // --- State ---
   const CONTROLLER_ID = '__controller__';
+  const FADE_DURATION = 30000; // 30 seconds
+  const ACTIVE_THRESHOLD = 5000; // 5 seconds for "active" state
   const nodes = [];  // {id, uuid, label, alive, pid, isController}
   const links = [];  // {source, target, count, lastDir, messages: []}
   const allMessages = []; // all messages for lookup
@@ -490,6 +499,8 @@ button:active { background: var(--border); }
   merge.append('feMergeNode').attr('in', 'blur');
   merge.append('feMergeNode').attr('in', 'SourceGraphic');
 
+  const edgeColorScale = d3.interpolateRgb('#666666', '#00d4ff');
+
   const g = svg.append('g');
   const linkGroup = g.append('g').attr('class', 'links');
   const nodeGroup = g.append('g').attr('class', 'nodes');
@@ -551,10 +562,31 @@ button:active { background: var(--border); }
       .on('click', (e, d) => {
         e.stopPropagation();
         selectLink(d);
+      })
+      .on('mouseenter', (e, d) => {
+        const fromLabel = shortId(typeof d.source === 'object' ? d.source.id : d.source);
+        const toLabel = shortId(typeof d.target === 'object' ? d.target.id : d.target);
+        const lastMsg = d.messages.length > 0 ? d.messages[d.messages.length - 1] : null;
+        const lastPreview = lastMsg ? (lastMsg.message || lastMsg.command || '').substring(0, 40) : '';
+        const lines = [`${fromLabel} \u2194 ${toLabel}`, `${d.count} message${d.count !== 1 ? 's' : ''}`];
+        if (lastPreview) lines.push(`Last: "${lastPreview}${(lastMsg.message || '').length > 40 ? '\u2026' : ''}"`);
+        tooltip.textContent = lines.join('\n');
+        tooltip.style.display = 'block';
+      })
+      .on('mousemove', (e) => {
+        tooltip.style.left = (e.pageX + 12) + 'px';
+        tooltip.style.top = (e.pageY - 10) + 'px';
+      })
+      .on('mouseleave', () => {
+        tooltip.style.display = 'none';
       });
 
     linkSel.merge(linkEnter)
-      .attr('stroke-width', d => Math.min(1 + d.count * 0.5, 4))
+      .attr('stroke-width', d => Math.min(1 + Math.log2(d.count + 1) * 1.5, 6))
+      .attr('stroke', d => {
+        const maxCount = Math.max(1, ...links.map(l => l.count));
+        return edgeColorScale(d.count / maxCount);
+      })
       .attr('marker-end', 'url(#arrow)');
 
     // --- Nodes ---
@@ -611,11 +643,15 @@ button:active { background: var(--border); }
         return 'var(--status-green)';
       })
       .attr('stroke', d => {
-        if (!d.isController && !d.alive) return '#444';
+        if (!d.isController && !d.alive) return 'var(--status-gray)';
         return 'none';
       })
       .attr('stroke-width', d => (!d.isController && !d.alive) ? 1.5 : 0)
-      .attr('filter', d => (d.alive && !d.isController) ? 'url(#glow)' : 'none');
+      .attr('filter', d => {
+        if (!d.alive || d.isController) return 'none';
+        const elapsed = d.lastActivityTime ? Date.now() - d.lastActivityTime : Infinity;
+        return elapsed < ACTIVE_THRESHOLD ? 'none' : 'url(#glow)';
+      });
 
     // Update simulation
     simulation.nodes(nodes);
@@ -724,7 +760,8 @@ button:active { background: var(--border); }
       label: shortId(nid),
       alive: alive,
       pid: pid,
-      isController: nid === CONTROLLER_ID
+      isController: nid === CONTROLLER_ID,
+      lastActivityTime: Date.now()
     };
     nodes.push(node);
     agentMap.set(nid, node);
@@ -756,12 +793,17 @@ button:active { background: var(--border); }
     let link = findLink(fromId, toId);
     if (!link) {
       const key = [fromId, toId].sort().join('--');
-      link = { source: fromId, target: toId, count: 0, lastDir: null, messages: [], key: key };
+      link = { source: fromId, target: toId, count: 0, lastDir: null, messages: [], key: key, lastActivityTime: Date.now() };
       links.push(link);
     }
     link.count++;
     link.lastDir = { from: fromId, to: toId };
     link.messages.push(msg);
+    link.lastActivityTime = Date.now();
+    const fromNode = agentMap.get(fromId);
+    const toNode = agentMap.get(toId);
+    if (fromNode) fromNode.lastActivityTime = Date.now();
+    if (toNode) toNode.lastActivityTime = Date.now();
 
     updateGraph();
     pulseLink(link);
@@ -909,6 +951,58 @@ button:active { background: var(--border); }
     autoScroll = true;
     scrollIndicator.style.display = 'none';
   });
+
+  // --- Recency fade ---
+  function updateRecency() {
+    const now = Date.now();
+
+    // Fade edges
+    linkGroup.selectAll('.link-line')
+      .attr('opacity', d => {
+        if (!d.lastActivityTime) return 0.3;
+        return Math.max(0.3, 1.0 - (now - d.lastActivityTime) / FADE_DURATION);
+      });
+
+    // Fade and update node state
+    nodeGroup.selectAll('.node-group')
+      .each(function(d) {
+        if (d.isController || !d.alive) return;
+
+        const elapsed = d.lastActivityTime ? now - d.lastActivityTime : Infinity;
+        const opacity = Math.max(0.3, 1.0 - elapsed / FADE_DURATION);
+        d3.select(this).attr('opacity', opacity);
+
+        // Active vs idle: add/remove pulse ring
+        const isActive = elapsed < ACTIVE_THRESHOLD;
+        const pulseRing = d3.select(this).select('.pulse-ring');
+
+        if (isActive && pulseRing.empty()) {
+          const ring = d3.select(this).insert('circle', 'text')
+            .attr('class', 'pulse-ring')
+            .attr('r', 14)
+            .attr('cx', 0)
+            .attr('cy', 0);
+          ring.append('animate')
+            .attr('attributeName', 'r')
+            .attr('from', '14')
+            .attr('to', '28')
+            .attr('dur', '2s')
+            .attr('repeatCount', 'indefinite');
+          ring.append('animate')
+            .attr('attributeName', 'opacity')
+            .attr('from', '0.6')
+            .attr('to', '0')
+            .attr('dur', '2s')
+            .attr('repeatCount', 'indefinite');
+        } else if (!isActive && !pulseRing.empty()) {
+          pulseRing.remove();
+        }
+      });
+
+    requestAnimationFrame(updateRecency);
+  }
+
+  requestAnimationFrame(updateRecency);
 
   // --- Init ---
   async function init() {
