@@ -40,6 +40,7 @@ def uuid_kind(u: str) -> str:
 
 # --- Enums ---
 
+
 class AgentState(enum.Enum):
     STARTING = "starting"
     RUNNING = "running"
@@ -63,6 +64,7 @@ class ResultCode(enum.Enum):
 
 
 # --- Event Types ---
+
 
 @dataclass(frozen=True)
 class AgentRegistered:
@@ -104,6 +106,7 @@ Event = AgentRegistered | AgentDeregistered | MessageEnqueued | MessageDrained
 
 
 # --- Domain Types ---
+
 
 @dataclass
 class Message:

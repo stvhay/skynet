@@ -67,8 +67,12 @@ def rewrite_changelog(new_version: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compute/update package versions")
-    parser.add_argument("--ci", action="store_true", help="CI mode: read bump type from CHANGELOG.md")
-    parser.add_argument("--update", action="store_true", help="Apply version bump (requires --ci)")
+    parser.add_argument(
+        "--ci", action="store_true", help="CI mode: read bump type from CHANGELOG.md"
+    )
+    parser.add_argument(
+        "--update", action="store_true", help="Apply version bump (requires --ci)"
+    )
     args = parser.parse_args()
 
     if args.update and not args.ci:

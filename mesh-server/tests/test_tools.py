@@ -58,7 +58,8 @@ def test_inv12_send_enqueues_message(state, store):  # Tests INV-12
     _register(state, store, "agent-1")
     _register(state, store, "agent-2")
     result = tool_send(
-        state, store,
+        state,
+        store,
         caller_uuid="agent-1",
         to="agent-2",
         message="hello",
@@ -107,7 +108,8 @@ def test_inv15_broadcast_fans_out(state, store):  # Tests INV-15
     _register(state, store, "agent-2")
     _register(state, store, "agent-3")
     result = tool_send(
-        state, store,
+        state,
+        store,
         caller_uuid="agent-1",
         to=BROADCAST_UUID,
         message="broadcast msg",

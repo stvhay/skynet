@@ -60,18 +60,20 @@ async def post_render_doc(request):
         if svg_path.exists() and path.endswith(".svg"):
             svg_content = svg_path.read_text()
             key = f"XFIGX{fig_idx[0]}XFIGX"
-            figures[key] = f'<div class="figure"><div class="figure-title">{alt}</div><div class="figure-body">{svg_content}</div></div>'
+            figures[key] = (
+                f'<div class="figure"><div class="figure-title">{alt}</div><div class="figure-body">{svg_content}</div></div>'
+            )
             fig_idx[0] += 1
             return key
         return match.group(0)
 
     # Replace ![alt](path.svg) and > ![alt](path.svg) patterns
-    md_text = re.sub(r'>\s*!\[([^\]]*)\]\(([^)]+\.svg)\)', replace_svg_ref, md_text)
-    md_text = re.sub(r'!\[([^\]]*)\]\(([^)]+\.svg)\)', replace_svg_ref, md_text)
+    md_text = re.sub(r">\s*!\[([^\]]*)\]\(([^)]+\.svg)\)", replace_svg_ref, md_text)
+    md_text = re.sub(r"!\[([^\]]*)\]\(([^)]+\.svg)\)", replace_svg_ref, md_text)
 
     # Remove ASCII code blocks that immediately follow an SVG figure placeholder
     # (the DESIGN.md has both SVG refs and ASCII fallbacks; browser only needs SVG)
-    md_text = re.sub(r'(XFIGX\d+XFIGX)\s*\n```[^\n]*\n[\s\S]*?```', r'\1', md_text)
+    md_text = re.sub(r"(XFIGX\d+XFIGX)\s*\n```[^\n]*\n[\s\S]*?```", r"\1", md_text)
 
     # Render markdown to HTML using python-markdown
     html_content = markdown.markdown(md_text, extensions=["tables", "fenced_code"])

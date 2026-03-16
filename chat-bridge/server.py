@@ -28,7 +28,9 @@ async def get_message(request):
     """
     global pending_request
     if pending_request is not None:
-        return web.json_response({"error": "another request already pending"}, status=409)
+        return web.json_response(
+            {"error": "another request already pending"}, status=409
+        )
 
     # If a reply was included, show it in the UI first
     reply = request.query.get("reply")

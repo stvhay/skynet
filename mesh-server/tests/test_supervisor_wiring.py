@@ -134,9 +134,7 @@ async def test_inv30_supervisor_deregisters_on_crash(
     assert state.get_agent(agent_uuid).alive is False
 
 
-async def test_inv30_no_double_deregister(
-    store, state, controller_uuid, mesh_dir
-):
+async def test_inv30_no_double_deregister(store, state, controller_uuid, mesh_dir):
     """Shutdown callback skips already-dead agents (Stop hook already called)."""
     # Register controller
     ctrl_event = AgentRegistered(

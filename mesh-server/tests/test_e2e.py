@@ -81,7 +81,10 @@ async def test_inv27_spawn_chain_e2e(client, state, store, controller_uuid):
     # Step 1: Controller spawns Agent A (sonnet) with initial_message
     resp = await client.post(
         "/api/spawn",
-        json={"model": "sonnet", "initial_message": "Begin your task: research auth module"},
+        json={
+            "model": "sonnet",
+            "initial_message": "Begin your task: research auth module",
+        },
     )
     assert resp.status_code == 200
     data_a = resp.json()
@@ -201,7 +204,9 @@ async def test_inv27_spawn_chain_e2e(client, state, store, controller_uuid):
     )
 
 
-async def test_inv27_sse_captures_spawn_chain_events(store, state, controller_uuid, mesh_dir):
+async def test_inv27_sse_captures_spawn_chain_events(
+    store, state, controller_uuid, mesh_dir
+):
     """SSE subscribers see all events from a simplified spawn chain."""
     # Register controller
     ctrl_event = AgentRegistered(
@@ -221,15 +226,14 @@ async def test_inv27_sse_captures_spawn_chain_events(store, state, controller_uu
         # Spawn agent A via prepare_spawn (simulating REST /api/spawn)
         from mesh_server.spawner import prepare_spawn
 
-        result_a = prepare_spawn(
-            state, store, mesh_dir=mesh_dir, model="sonnet"
-        )
+        result_a = prepare_spawn(state, store, mesh_dir=mesh_dir, model="sonnet")
         assert result_a["code"] == "ok"
         uuid_a = result_a["data"]["uuid"]
 
         # Controller sends initial message to A
         tool_send(
-            state, store,
+            state,
+            store,
             caller_uuid=controller_uuid,
             to=uuid_a,
             message="Do the thing",
@@ -237,7 +241,8 @@ async def test_inv27_sse_captures_spawn_chain_events(store, state, controller_uu
 
         # A sends report to controller
         tool_send(
-            state, store,
+            state,
+            store,
             caller_uuid=uuid_a,
             to=controller_uuid,
             message="Done",
