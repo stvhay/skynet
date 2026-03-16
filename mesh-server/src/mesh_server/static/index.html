@@ -1246,7 +1246,12 @@ button:active { background: var(--border); }
     // Fade and update node state
     nodeGroup.selectAll('.node-group')
       .each(function(d) {
-        if (d.isController || !d.alive) return;
+        if (d.isController) return;
+
+        if (!d.alive) {
+          d3.select(this).attr('opacity', 0.3);
+          return;
+        }
 
         const elapsed = d.lastActivityTime ? now - d.lastActivityTime : Infinity;
         const opacity = Math.max(0.3, 1.0 - elapsed / FADE_DURATION);
