@@ -874,7 +874,7 @@ button:active { background: var(--border); }
 
     const msgs = allMessages.filter(m =>
       nodeIdFor(m.from_uuid) === d.id || nodeIdFor(m.to_uuid) === d.id
-    ).sort((a, b) => a.timestamp - b.timestamp);
+    ).sort((m1, m2) => m1.timestamp - m2.timestamp);
 
     html += `<div class="node-detail"><div class="node-messages-header">Messages (${msgs.length})</div></div>`;
     html += renderMessageList(msgs);
@@ -916,7 +916,7 @@ button:active { background: var(--border); }
       const f = nodeIdFor(m.from_uuid);
       const t = nodeIdFor(m.to_uuid);
       return (f === sid && t === tid) || (f === tid && t === sid);
-    }).sort((a, b) => a.timestamp - b.timestamp);
+    }).sort((m1, m2) => m1.timestamp - m2.timestamp);
 
     const body = document.getElementById('detail-body');
     body.innerHTML = `<div class="node-detail"><div class="node-messages-header">${escapeHtml(a)} \u2194 ${escapeHtml(b)} (${msgs.length} messages)</div></div>` + renderMessageList(msgs);
