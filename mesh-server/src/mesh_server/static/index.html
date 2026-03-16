@@ -184,9 +184,8 @@ header .status.disconnected { color: var(--status-red); }
 
 .msg-row .msg-text {
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-wrap: break-word;
+  white-space: normal;
 }
 
 #sidebar {
@@ -305,6 +304,99 @@ button:active { background: var(--border); }
   padding: 12px;
   text-align: center;
 }
+
+.node-detail {
+  padding: 8px 12px;
+}
+
+.node-detail .node-field {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.node-detail .node-field .field-label {
+  color: var(--text-secondary);
+  display: inline-block;
+  min-width: 60px;
+}
+
+.node-detail .node-field .field-value {
+  color: var(--text-primary);
+}
+
+.node-detail .node-messages-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-shutdown {
+  margin-top: 8px;
+  background: transparent;
+  border: 1px solid var(--status-red);
+  color: var(--status-red);
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  width: auto;
+}
+
+.btn-shutdown:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.btn-shutdown:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.inbox-badge {
+  fill: var(--status-red);
+  font-size: 9px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.inbox-badge-bg {
+  fill: var(--status-red);
+  pointer-events: none;
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.detail-tab {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  width: auto;
+}
+
+.detail-tab:hover { color: var(--text-secondary); }
+.detail-tab.active {
+  color: var(--text-secondary);
+  border-bottom-color: var(--accent);
+}
 </style>
 </head>
 <body>
@@ -320,9 +412,12 @@ button:active { background: var(--border); }
     <div class="scroll-indicator" id="scroll-indicator" style="display:none">Auto-scroll paused — new events below</div>
   </div>
   <div id="detail-panel">
-    <div class="panel-header" id="detail-title">Messages</div>
-    <div class="panel-body" id="detail-body">
-      <div class="detail-empty">Click a node or edge to view messages</div>
+    <div class="detail-tabs" role="tablist" aria-label="Detail panel">
+      <button class="detail-tab active" role="tab" aria-selected="true" id="tab-detail" aria-controls="tabpanel-detail">Detail</button>
+      <button class="detail-tab" role="tab" aria-selected="false" id="tab-inbox" aria-controls="tabpanel-inbox">Inbox</button>
+    </div>
+    <div class="panel-body" id="detail-body" role="tabpanel" aria-labelledby="tab-detail">
+      <div class="detail-empty">Click a node or edge to inspect</div>
     </div>
   </div>
   <div id="sidebar">
@@ -388,6 +483,10 @@ button:active { background: var(--border); }
   let selectedNode = null;
   let selectedLink = null;
   let autoScroll = true;
+  let inboxMessages = [];
+  let unreadCount = 0;
+  let activeTab = 'detail'; // 'detail' or 'inbox'
+  let uptimeInterval = null;
 
   // --- Helpers ---
   function shortId(uuid) {
@@ -420,6 +519,38 @@ button:active { background: var(--border); }
     const div = document.createElement('div');
     div.textContent = s;
     return div.innerHTML;
+  }
+
+  function getNodeState(d) {
+    if (!d.alive) return 'Dead';
+    const elapsed = d.lastActivityTime ? Date.now() - d.lastActivityTime : Infinity;
+    return elapsed < ACTIVE_THRESHOLD ? 'Active' : 'Idle';
+  }
+
+  function formatUptime(seconds) {
+    const s = Math.floor(seconds);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    if (m < 60) return `${m}m ${rem}s`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  }
+
+  function renderMessageList(msgs) {
+    if (msgs.length === 0) return '<div class="detail-empty">No messages</div>';
+    return msgs.map(m => {
+      const fromId = shortId(nodeIdFor(m.from_uuid));
+      const toId = shortId(nodeIdFor(m.to_uuid));
+      const isCtrl = isControllerUuid(m.from_uuid) || isControllerUuid(m.to_uuid);
+      const text = m.message || m.command || '';
+      return `<div class="msg-row${isCtrl ? ' controller-msg' : ''}">
+        <span class="msg-dir">\u2192</span>
+        <span class="msg-ids">${escapeHtml(fromId)} \u2192 ${escapeHtml(toId)}</span>
+        <span class="msg-time">${formatTime(m.timestamp)}</span>
+        <span class="msg-text">${escapeHtml(text)}</span>
+      </div>`;
+    }).join('');
   }
 
   // --- Event Log ---
@@ -683,67 +814,162 @@ button:active { background: var(--border); }
   function clearSelection() {
     selectedNode = null;
     selectedLink = null;
-    document.getElementById('detail-title').textContent = 'Messages';
+    if (uptimeInterval) { clearInterval(uptimeInterval); uptimeInterval = null; }
+    activeTab = 'detail';
+    updateTabState();
     document.getElementById('detail-body').innerHTML =
-      '<div class="detail-empty">Click a node or edge to view messages</div>';
+      '<div class="detail-empty">Click a node or edge to inspect</div>';
   }
 
   function selectNode(d) {
     selectedNode = d;
     selectedLink = null;
-    const label = d.isController ? 'you' : shortId(d.id);
-    document.getElementById('detail-title').textContent = `Messages: ${label}`;
-    renderMessages();
+    activeTab = 'detail';
+    updateTabState();
+
+    const body = document.getElementById('detail-body');
+
+    if (d.isController) {
+      showInbox();
+      return;
+    }
+
+    const state = getNodeState(d);
+    const uptime = d.registeredAt ? formatUptime(Date.now() / 1000 - d.registeredAt) : 'unknown';
+
+    let html = '<div class="node-detail">';
+    html += `<div class="node-field"><span class="field-label">UUID</span> <span class="field-value">${escapeHtml(d.uuid)}</span></div>`;
+    html += `<div class="node-field"><span class="field-label">PID</span> <span class="field-value">${escapeHtml(String(d.pid || 'unknown'))}</span></div>`;
+    html += `<div class="node-field"><span class="field-label">State</span> <span class="field-value">${escapeHtml(state)}</span></div>`;
+    html += `<div class="node-field" id="uptime-field"><span class="field-label">Uptime</span> <span class="field-value">${escapeHtml(uptime)}</span></div>`;
+
+    html += `<button class="btn-shutdown" ${!d.alive ? 'disabled' : ''} aria-label="Shutdown agent ${escapeHtml(shortId(d.id))}" id="btn-shutdown-agent">Shutdown Agent</button>`;
+
+    html += '</div>';
+
+    const msgs = allMessages.filter(m =>
+      nodeIdFor(m.from_uuid) === d.id || nodeIdFor(m.to_uuid) === d.id
+    ).sort((a, b) => a.timestamp - b.timestamp);
+
+    html += `<div class="node-detail"><div class="node-messages-header">Messages (${msgs.length})</div></div>`;
+    html += renderMessageList(msgs);
+
+    body.innerHTML = html;
+
+    // Wire shutdown button via addEventListener (not inline onclick)
+    const shutdownBtn = document.getElementById('btn-shutdown-agent');
+    if (shutdownBtn && d.alive) {
+      shutdownBtn.addEventListener('click', () => confirmShutdown(d.uuid));
+    }
+
+    // Live-updating uptime
+    if (uptimeInterval) clearInterval(uptimeInterval);
+    if (d.alive && d.registeredAt) {
+      uptimeInterval = setInterval(() => {
+        const el = document.getElementById('uptime-field');
+        if (el) {
+          const val = el.querySelector('.field-value');
+          if (val) val.textContent = formatUptime(Date.now() / 1000 - d.registeredAt);
+        }
+      }, 1000);
+    }
   }
 
   function selectLink(d) {
     selectedLink = d;
     selectedNode = null;
-    const a = shortId(typeof d.source === 'object' ? d.source.id : d.source);
-    const b = shortId(typeof d.target === 'object' ? d.target.id : d.target);
-    document.getElementById('detail-title').textContent = `Messages: ${a} \u2194 ${b}`;
-    renderMessages();
+    activeTab = 'detail';
+    updateTabState();
+    if (uptimeInterval) { clearInterval(uptimeInterval); uptimeInterval = null; }
+
+    const sid = typeof d.source === 'object' ? d.source.id : d.source;
+    const tid = typeof d.target === 'object' ? d.target.id : d.target;
+    const a = shortId(sid);
+    const b = shortId(tid);
+
+    const msgs = allMessages.filter(m => {
+      const f = nodeIdFor(m.from_uuid);
+      const t = nodeIdFor(m.to_uuid);
+      return (f === sid && t === tid) || (f === tid && t === sid);
+    }).sort((a, b) => a.timestamp - b.timestamp);
+
+    const body = document.getElementById('detail-body');
+    body.innerHTML = `<div class="node-detail"><div class="node-messages-header">${escapeHtml(a)} \u2194 ${escapeHtml(b)} (${msgs.length} messages)</div></div>` + renderMessageList(msgs);
   }
 
-  function renderMessages() {
+  async function confirmShutdown(uuid) {
+    const short = shortId(nodeIdFor(uuid));
+    if (!confirm(`Shut down agent ${short} (${uuid})?`)) return;
+
+    try {
+      const res = await fetch(`/api/agents/${encodeURIComponent(uuid)}/shutdown`, { method: 'POST' });
+      if (!res.ok) console.error('Shutdown failed:', res.status);
+    } catch (err) {
+      console.error('Shutdown failed:', err);
+    }
+  }
+
+  async function showInbox() {
+    activeTab = 'inbox';
+    updateTabState();
+    selectedNode = agentMap.get(CONTROLLER_ID);
+    selectedLink = null;
+    if (uptimeInterval) { clearInterval(uptimeInterval); uptimeInterval = null; }
+
     const body = document.getElementById('detail-body');
-    let msgs = [];
+    body.innerHTML = '<div class="detail-empty">Loading inbox...</div>';
 
-    if (selectedNode) {
-      const nid = selectedNode.id;
-      msgs = allMessages.filter(m =>
-        nodeIdFor(m.from_uuid) === nid || nodeIdFor(m.to_uuid) === nid
-      );
-    } else if (selectedLink) {
-      const sid = typeof selectedLink.source === 'object' ? selectedLink.source.id : selectedLink.source;
-      const tid = typeof selectedLink.target === 'object' ? selectedLink.target.id : selectedLink.target;
-      msgs = allMessages.filter(m => {
-        const f = nodeIdFor(m.from_uuid);
-        const t = nodeIdFor(m.to_uuid);
-        return (f === sid && t === tid) || (f === tid && t === sid);
-      });
+    try {
+      const res = await fetch('/api/inbox');
+      const json = await res.json();
+      inboxMessages = json.data?.messages || [];
+      unreadCount = 0;
+      updateInboxBadge();
+
+      if (inboxMessages.length === 0) {
+        body.innerHTML = '<div class="detail-empty">No messages in inbox</div>';
+        return;
+      }
+
+      const sorted = [...inboxMessages].sort((a, b) => b.timestamp - a.timestamp);
+      body.innerHTML = renderMessageList(sorted);
+    } catch (err) {
+      body.innerHTML = '<div class="detail-empty">Failed to load inbox</div>';
+      console.error('Inbox fetch failed:', err);
     }
+  }
 
-    if (msgs.length === 0) {
-      body.innerHTML = '<div class="detail-empty">No messages</div>';
-      return;
-    }
+  function updateInboxBadge() {
+    nodeGroup.selectAll('.inbox-badge-group').remove();
 
-    msgs.sort((a, b) => a.timestamp - b.timestamp);
-    body.innerHTML = msgs.map(m => {
-      const fromId = shortId(nodeIdFor(m.from_uuid));
-      const toId = shortId(nodeIdFor(m.to_uuid));
-      const isCtrl = isControllerUuid(m.from_uuid) || isControllerUuid(m.to_uuid);
-      const text = m.message || m.command || '';
-      return `<div class="msg-row${isCtrl ? ' controller-msg' : ''}">
-        <span class="msg-dir">\u2192</span>
-        <span class="msg-ids">${fromId} \u2192 ${toId}</span>
-        <span class="msg-time">${formatTime(m.timestamp)}</span>
-        <span class="msg-text">${escapeHtml(text)}</span>
-      </div>`;
-    }).join('');
+    if (unreadCount <= 0) return;
 
-    body.scrollTop = body.scrollHeight;
+    const ctrlGroup = nodeGroup.selectAll('.node-group')
+      .filter(d => d.isController);
+
+    if (ctrlGroup.empty()) return;
+
+    const badgeG = ctrlGroup.append('g').attr('class', 'inbox-badge-group');
+    badgeG.append('circle')
+      .attr('class', 'inbox-badge-bg')
+      .attr('cx', 14)
+      .attr('cy', -14)
+      .attr('r', 8);
+    badgeG.append('text')
+      .attr('class', 'inbox-badge')
+      .attr('x', 14)
+      .attr('y', -11)
+      .attr('text-anchor', 'middle')
+      .text(unreadCount > 9 ? '9+' : unreadCount);
+  }
+
+  function updateTabState() {
+    const tabDetail = document.getElementById('tab-detail');
+    const tabInbox = document.getElementById('tab-inbox');
+    tabDetail.classList.toggle('active', activeTab === 'detail');
+    tabDetail.setAttribute('aria-selected', String(activeTab === 'detail'));
+    tabInbox.classList.toggle('active', activeTab === 'inbox');
+    tabInbox.setAttribute('aria-selected', String(activeTab === 'inbox'));
   }
 
   // --- Agent management ---
@@ -762,7 +988,8 @@ button:active { background: var(--border); }
       alive: alive,
       pid: pid,
       isController: nid === CONTROLLER_ID,
-      lastActivityTime: Date.now()
+      lastActivityTime: Date.now(),
+      registeredAt: Date.now() / 1000
     };
     nodes.push(node);
     agentMap.set(nid, node);
@@ -809,7 +1036,8 @@ button:active { background: var(--border); }
     updateGraph();
     pulseLink(link);
 
-    if (selectedNode || selectedLink) renderMessages();
+    if (selectedNode) selectNode(selectedNode);
+    else if (selectedLink) selectLink(selectedLink);
   }
 
   function pulseLink(link) {
@@ -881,6 +1109,10 @@ button:active { background: var(--border); }
         break;
       case 'MessageEnqueued':
         addMessage(event);
+        if (isControllerUuid(event.to_uuid) && activeTab !== 'inbox') {
+          unreadCount++;
+          updateInboxBadge();
+        }
         break;
       case 'MessageDrained':
         break;
@@ -935,6 +1167,19 @@ button:active { background: var(--border); }
     } catch (err) {
       console.error('Send failed:', err);
     }
+  });
+
+  // --- Tab switching ---
+  document.getElementById('tab-detail').addEventListener('click', () => {
+    activeTab = 'detail';
+    updateTabState();
+    if (selectedNode) selectNode(selectedNode);
+    else if (selectedLink) selectLink(selectedLink);
+    else clearSelection();
+  });
+
+  document.getElementById('tab-inbox').addEventListener('click', () => {
+    showInbox();
   });
 
   // --- Event log auto-scroll ---
