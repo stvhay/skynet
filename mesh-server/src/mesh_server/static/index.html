@@ -513,6 +513,7 @@ button:active { background: var(--border); }
   let activeTab = 'detail'; // 'detail' or 'inbox'
   let uptimeInterval = null;
   let inboxFetching = false;
+  let recencyIntervalId = null;
 
   // --- Helpers ---
   function shortId(uuid) {
@@ -1287,7 +1288,7 @@ button:active { background: var(--border); }
 
   }
 
-  setInterval(updateRecency, 1000);
+  recencyIntervalId = setInterval(updateRecency, 1000);
 
   // --- Init ---
   async function init() {
