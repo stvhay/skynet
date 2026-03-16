@@ -1300,6 +1300,8 @@ button:active { background: var(--border); }
       alive: true,
       pid: null,
       isController: true,
+      lastActivityTime: Date.now(),
+      registeredAt: Date.now() / 1000,
       fx: width / 2,
       fy: height * 0.25
     };
