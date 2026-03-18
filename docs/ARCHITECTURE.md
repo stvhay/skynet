@@ -17,7 +17,7 @@ For protocol details, see [DESIGN.md](DESIGN.md).
 | [mesh-server](../mesh-server/) | Message routing, agent lifecycle, event store | v0.2 | [SPEC.md](../mesh-server/SPEC.md) |
 | [controller-ui](../mesh-server/src/mesh_server/static/) | Web UI for human controller | v0.3 | — |
 | [agent-runtime](../agent-runtime/) | Agent bootstrap and lifecycle management | v0.3 | [SPEC.md](../agent-runtime/SPEC.md) |
-| channels | XOR-derived filesystem channels | Planned | — |
+| [channels](../channels/) | XOR-derived filesystem channels for attachments | v0.4 | [SPEC.md](../channels/SPEC.md) |
 
 ## Technology Stack
 
@@ -172,6 +172,14 @@ In the context of needing spawn_neighbor to launch real Claude CLI processes, fa
 The supervisor writes config artifacts (MCP config, hooks, CLAUDE.md, settings.json) to the agent's directory, launches `claude` as a subprocess, and monitors it. If an agent process exits unexpectedly, the supervisor emits an AgentDeregistered event automatically.
 
 Spawned agents inherit the parent process environment, including Claude Code subscription credentials — no API key is required.
+
+## Channel Resolution
+
+In the context of agents needing to exchange files (screenshots, code, reports) without routing binary data through the MCP message bus, facing the choice between server-mediated file transfer or direct filesystem access, we decided to use XOR-derived directory paths that both parties compute independently, accepting that agents must have shared filesystem access (true for single-machine deployments).
+
+Channel directories live under `.mesh/channels/<xor-uuid>/attachments/`. The XOR of sorted participant UUIDs (as 128-bit integers) produces a full UUID used as the directory name. The well-known `.mesh/channels/all/` directory serves broadcast file sharing.
+
+Agents write files to the channel directory, then reference them via attachment descriptors in `send()`. Recipients read the file paths from their inbox. The server validates descriptors but does not intermediate file I/O.
 
 ## Further Reading
 

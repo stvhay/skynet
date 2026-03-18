@@ -11,11 +11,12 @@ Event-sourced MCP server for message-passing between agent instances. Singleton 
 | Tool | Description |
 |---|---|
 | `whoami(caller_uuid)` | Returns agent's UUID and neighbor count |
-| `send(caller_uuid, to, message?, command?)` | Send message to agent(s) or broadcast |
+| `send(caller_uuid, to, message?, command?, attachments?)` | Send message to agent(s) or broadcast |
 | `read_inbox(caller_uuid, block?)` | Drain inbox; block=true yields until message |
 | `show_neighbors(caller_uuid)` | List all registered agents |
 | `spawn_neighbor(caller_uuid, claude_md?, model?, thinking_budget?)` | Register new agent, prepare credentials |
 | `shutdown(caller_uuid)` | Self-terminate, deregister from mesh |
+| `resolve_channel(caller_uuid, participants)` | Resolve XOR-derived channel directory path |
 
 ### REST/SSE API (controller web UI)
 
@@ -71,6 +72,11 @@ Event-sourced MCP server for message-passing between agent instances. Singleton 
 - **INV-29**: REST /api/spawn launches Claude CLI subprocess via AgentSupervisor
 - **INV-30**: Supervisor emits AgentDeregistered when process exits unexpectedly
 - **INV-31**: Mock CLI agent completes full spawn→connect→message→shutdown cycle
+- **INV-32**: send with attachments stores descriptors in MessageEnqueued event
+- **INV-33**: read_inbox returns attachments with resolved absolute paths
+- **INV-34**: resolve_channel returns correct XOR-derived path for participant set
+- **INV-35**: resolve_channel creates directory on first call
+- **INV-36**: Old events without attachments field replay with None default
 
 ## Failure Modes
 
@@ -80,13 +86,17 @@ Event-sourced MCP server for message-passing between agent instances. Singleton 
 - **FAIL-4**: Duplicate UUID registration (astronomically unlikely with UUIDv4)
 - **FAIL-5**: Invalid model string returns error
 - **FAIL-6**: Invalid thinking_budget (< 1024) returns error
+- **FAIL-7**: send rejects attachments that are not a list
+- **FAIL-8**: send rejects attachment descriptor missing 'type' field
+- **FAIL-9**: send rejects attachment path containing '..' (path traversal)
+- **FAIL-10**: resolve_channel with no other participants returns invalid_args
 
 ## Event Model
 
 ```
 AgentRegistered(uuid, token_hash, pid, timestamp)
 AgentDeregistered(uuid, reason, timestamp)
-MessageEnqueued(id, from_uuid, to_uuid, command?, message?, timestamp)
+MessageEnqueued(id, from_uuid, to_uuid, command?, message?, timestamp, attachments?)
 MessageDrained(message_id, by_uuid, timestamp)
 ```
 
