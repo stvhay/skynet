@@ -1,7 +1,6 @@
 # Changelog
 
-## Unreleased
-<!-- bump: minor -->
+## 0.3.0
 
 ### Added
 - Controller UI v0.3: event log panel with color-coded icons, auto-scroll, and pause indicator
