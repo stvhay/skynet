@@ -22,6 +22,7 @@ from mesh_server.projections import MeshState
 from mesh_server.types import (
     BROADCAST_UUID,
     AgentDeregistered,
+    Message,
     MessageDrained,
     MessageEnqueued,
 )
