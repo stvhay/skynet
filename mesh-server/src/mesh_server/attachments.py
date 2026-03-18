@@ -60,10 +60,12 @@ def resolve_attachment_paths(
     resolved = []
     for att in attachments:
         if "path" in att:
-            resolved.append({
-                **att,
-                "path": str(attachments_dir / att["path"]),
-            })
+            resolved.append(
+                {
+                    **att,
+                    "path": str(attachments_dir / att["path"]),
+                }
+            )
         else:
             resolved.append(att)
     return resolved

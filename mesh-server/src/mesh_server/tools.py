@@ -140,11 +140,7 @@ def tool_read_inbox(
 
     return _result(
         "ok",
-        {
-            "messages": [
-                _format_message(m, mesh_dir=mesh_dir) for m in messages
-            ]
-        },
+        {"messages": [_format_message(m, mesh_dir=mesh_dir) for m in messages]},
     )
 
 

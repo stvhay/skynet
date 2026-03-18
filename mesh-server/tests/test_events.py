@@ -211,15 +211,17 @@ async def test_inv19_full_queue_skipped(event_log):
 def test_inv36_replay_without_attachments(event_log):  # Tests INV-36
     """INV-36: Old events without attachments replay with None default."""
     # Write a MessageEnqueued event WITHOUT the attachments field (simulates old data)
-    old_event_json = json.dumps({
-        "type": "MessageEnqueued",
-        "id": "msg-old",
-        "from_uuid": "agent-1",
-        "to_uuid": "agent-2",
-        "command": None,
-        "message": "legacy message",
-        "timestamp": time.time(),
-    })
+    old_event_json = json.dumps(
+        {
+            "type": "MessageEnqueued",
+            "id": "msg-old",
+            "from_uuid": "agent-1",
+            "to_uuid": "agent-2",
+            "command": None,
+            "message": "legacy message",
+            "timestamp": time.time(),
+        }
+    )
     event_log.path.parent.mkdir(parents=True, exist_ok=True)
     with open(event_log.path, "w") as f:
         f.write(old_event_json + "\n")
