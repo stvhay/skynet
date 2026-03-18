@@ -120,6 +120,7 @@ def create_api_routes(
             to=to,
             message=body.get("message"),
             command=body.get("command"),
+            attachments=body.get("attachments"),
         )
         if result.get("code") == "not_found":
             return JSONResponse(result, status_code=404)
@@ -185,7 +186,9 @@ def create_api_routes(
 
     async def api_inbox(request: Request) -> Response:
         """Return controller's inbox messages."""
-        result = tool_read_inbox(state, store, caller_uuid=controller_uuid)
+        result = tool_read_inbox(
+            state, store, caller_uuid=controller_uuid, mesh_dir=mesh_dir
+        )
         return JSONResponse(result)
 
     async def index(request: Request) -> Response:

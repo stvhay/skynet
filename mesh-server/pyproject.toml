@@ -5,6 +5,7 @@ description = "MCP Mesh Server — event-sourced message-passing actor system"
 requires-python = ">=3.13"
 dependencies = [
     "agent-runtime",
+    "channels",
     "mcp[cli]>=1.2.0",
     "uvicorn>=0.30",
 ]
@@ -25,6 +26,7 @@ packages = ["src/mesh_server"]
 
 [tool.uv.sources]
 agent-runtime = { path = "../agent-runtime" }
+channels = { path = "../channels" }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

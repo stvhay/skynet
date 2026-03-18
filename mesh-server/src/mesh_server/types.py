@@ -91,6 +91,7 @@ class MessageEnqueued:
     command: str | None
     message: str | None
     timestamp: float
+    attachments: list[dict] | None = None
     type: str = field(default="MessageEnqueued", init=False)
 
 
@@ -116,6 +117,7 @@ class Message:
     command: str | None
     message: str | None
     timestamp: float
+    attachments: list[dict] | None = None
 
 
 @dataclass

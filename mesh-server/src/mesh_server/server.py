@@ -20,6 +20,7 @@ from mesh_server.projections import MeshState
 from mesh_server.spawner import prepare_spawn
 from mesh_server.tools import (
     tool_read_inbox_async,
+    tool_resolve_channel,
     tool_send,
     tool_show_neighbors,
     tool_shutdown,
@@ -120,6 +121,7 @@ async def send(
     ctx: Ctx,
     message: str | None = None,
     command: str | None = None,
+    attachments: list | None = None,
 ) -> dict:
     """Send a message to another agent or broadcast.
 
@@ -128,6 +130,7 @@ async def send(
         to: Recipient UUID, or "00000000-0000-0000-0000-000000000000" for broadcast
         message: Free-form message text
         command: Optional structured command string
+        attachments: Optional list of attachment descriptors (each must have a 'type' field)
     """
     app = _get_app(ctx)
     agent = app.state.get_agent(caller_uuid)
@@ -140,6 +143,7 @@ async def send(
         to=to,
         message=message,
         command=command,
+        attachments=attachments,
     )
 
 
@@ -161,6 +165,7 @@ async def read_inbox(
         app.store,
         caller_uuid=caller_uuid,
         block=block,
+        mesh_dir=app.mesh_dir,
     )
 
 
@@ -184,6 +189,26 @@ async def shutdown(caller_uuid: str, ctx: Ctx) -> dict:
     """
     app = _get_app(ctx)
     return tool_shutdown(app.state, app.store, caller_uuid=caller_uuid)
+
+
+@mcp.tool()
+async def resolve_channel(
+    caller_uuid: str,
+    participants: list[str],
+    ctx: Ctx,
+) -> dict:
+    """Resolve the shared channel directory for exchanging files with other agents.
+
+    Args:
+        caller_uuid: Your agent UUID (from MESH_AGENT_ID env var)
+        participants: List of other agent UUIDs to share the channel with
+    """
+    app = _get_app(ctx)
+    return tool_resolve_channel(
+        mesh_dir=app.mesh_dir,
+        caller_uuid=caller_uuid,
+        participants=participants,
+    )
 
 
 @mcp.tool()
