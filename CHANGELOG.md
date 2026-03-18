@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+<!-- bump: patch -->
+
+### Changed
+- CI: split monolithic job into parallel lint, test, smoke, version-check jobs
+- CI: pin Python 3.13, bump `requires-python` to `>=3.13` in both packages
+- CI: add agent-runtime test step (previously only mesh-server tested)
+- CI: add push trigger for main (previously PR-only)
+- CI: enable uv dependency caching via `astral-sh/setup-uv@v4`
+- CI: add smoke test job using `pytest -m smoke` (live pipeline test)
+
 ## 0.3.0
 
 ### Added
