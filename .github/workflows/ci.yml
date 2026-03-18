@@ -1,10 +1,31 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Lint
+        run: |
+          uv tool run ruff check .
+          uv tool run ruff format --check .
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -12,23 +33,45 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
-      - name: Install and test mesh-server
+      - name: Test mesh-server
         run: |
           cd mesh-server && uv sync --all-extras
+          uv run pytest -m "not smoke"
+
+      - name: Test agent-runtime
+        run: |
+          cd agent-runtime && uv sync
           uv run pytest
 
-      - name: Lint
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Smoke test
         run: |
-          uv tool run ruff check .
-          uv tool run ruff format --check .
+          cd mesh-server && uv sync --all-extras
+          uv run pytest -m smoke -v
 
   version-check:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
 
