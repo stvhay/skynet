@@ -16,6 +16,7 @@ build/
 # Claude Code (track settings.json via negation)
 .claude/*
 !.claude/settings.json
+!.claude/plans/
 MEMORY.md
 
 # Mesh runtime
