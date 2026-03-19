@@ -1,6 +1,6 @@
 [project]
 name = "mesh-server"
-version = "0.3.0"
+version = "0.3.1"
 description = "MCP Mesh Server — event-sourced message-passing actor system"
 requires-python = ">=3.13"
 dependencies = [
