@@ -57,15 +57,26 @@ jobs:
           BRANCH="release/${{ steps.bump.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Clean up stale release branch from previous failed runs
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "release: ${{ steps.bump.outputs.version }}"
           git push origin "$BRANCH"
-          gh pr create \
-            --title "release: ${{ steps.bump.outputs.version }}" \
-            --body "$(cat /tmp/release-notes.md)" \
-            --base main \
-            --head "$BRANCH"
+
+          # Check if PR already exists for this branch
+          EXISTING_PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Release PR #$EXISTING_PR already exists — skipping creation"
+          else
+            gh pr create \
+              --title "release: ${{ steps.bump.outputs.version }}" \
+              --body "$(cat /tmp/release-notes.md)" \
+              --base main \
+              --head "$BRANCH"
+          fi
 
   tag-release:
     runs-on: ubuntu-latest
