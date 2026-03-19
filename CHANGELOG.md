@@ -3,6 +3,15 @@
 ## Unreleased
 <!-- bump: patch -->
 
+### Added
+- New `channels/` subsystem: XOR-derived filesystem channels for attachment exchange between agents
+- `resolve_channel` MCP tool (#7): returns deterministic shared directory path for file exchange
+- `attachments` parameter on `send()` tool: typed attachment descriptors (inline or file-ref)
+- `attachments` field in `read_inbox()` response: resolved absolute paths for file-ref attachments
+- `channels/SPEC.md` with 6 invariants and 1 failure mode
+- Attachment validation: type field required, path traversal (`..`) rejected
+- Backward-compatible event replay: old events without `attachments` field replay with `None`
+
 ### Changed
 - CI: split monolithic job into parallel lint, test, smoke, version-check jobs
 - CI: pin Python 3.13, bump `requires-python` to `>=3.13` in both packages

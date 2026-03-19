@@ -42,7 +42,7 @@ uv run mesh-server
 | mesh-server | `mesh-server/` | Singleton MCP server: message routing, agent lifecycle, event store |
 | controller-ui | `mesh-server/src/mesh_server/static/` | Web UI for traffic monitoring, agent management, send/receive |
 | agent-runtime | `agent-runtime/` | Agent bootstrap, UUID assignment, MCP connection, lifecycle |
-| channels | *(planned)* | XOR-derived filesystem channels for attachments and shared artifacts |
+| channels | `channels/` | XOR-derived filesystem channels for attachments and shared artifacts |
 
 ## Development
 

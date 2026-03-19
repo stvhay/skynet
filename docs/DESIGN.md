@@ -14,7 +14,7 @@ The mesh consists of three layers: agents (Claude CLI instances or any MCP-capab
 
 For subsystem boundaries and technology decisions, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Tool API (6 Tools)
+## Tool API (7 Tools)
 
 ![Tool API](images/04-tool-api.svg)
 
@@ -31,9 +31,9 @@ Returns queued messages addressed to the calling agent. Drains the inbox — ret
 - `block=false` (default) — returns immediately, possibly empty. Agent continues working.
 - `block=true` — holds until at least one message arrives. This is how an agent goes idle and yields execution.
 
-### 3. `send(caller_uuid, to, message?, command?)`
+### 3. `send(caller_uuid, to, message?, command?, attachments?)`
 
-Sends a message to one or more recipients.
+Sends a message to one or more recipients. The optional `attachments` parameter is a list of attachment descriptors. Each descriptor must include a `type` field. File-reference attachments include a `path` field (relative to the channel's `attachments/` directory). Inline attachments include a `data` field.
 
 | `to` value | Behavior |
 |---|---|
@@ -60,6 +60,14 @@ Registers a new agent in the mesh. Generates credentials (UUID, bearer token) an
 ### 6. `shutdown(caller_uuid)`
 
 Agent self-terminates. The server emits an `AgentDeregistered` event and marks the agent as dead. The controller can also shut down any agent.
+
+### 7. `resolve_channel(caller_uuid, participants) -> {channel_dir, attachments_dir}`
+
+Returns the absolute path to the channel directory for a set of participants. Creates the directory if it doesn't exist. Agents call this before writing files to know where to place them.
+
+- `participants` must contain at least one UUID besides the caller
+- Broadcast UUID resolves to `.mesh/channels/all/`
+- Dead agent UUIDs are allowed — channels outlive agents
 
 ## Message Schema
 
@@ -366,6 +374,7 @@ The original design identified 8 open questions. Here are the resolutions adopte
 
 ## Future Work
 
-The controller-ui and agent-runtime subsystems are now implemented in v0.2. The remaining planned subsystem:
+All four planned subsystems (mesh-server, controller-ui, agent-runtime, channels) are now implemented. Remaining areas:
 
-- **channels** — XOR-derived filesystem channels for attachments and shared artifacts. Manages directory creation, cleanup policies, and access patterns for the `.mesh/channels/` tree.
+- **REST API authentication** — REST endpoints currently have no authentication; the system works without it in single-machine deployments
+- **Backpressure** — inboxes can grow without bound; not a practical concern at current mesh sizes

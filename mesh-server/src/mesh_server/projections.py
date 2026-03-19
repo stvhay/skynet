@@ -69,6 +69,7 @@ class MeshState:
             command=event.command,
             message=event.message,
             timestamp=event.timestamp,
+            attachments=event.attachments,
         )
         self._inboxes.setdefault(event.to_uuid, []).append(msg)
         # Signal waiter if agent is blocked on read_inbox

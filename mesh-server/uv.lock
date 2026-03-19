@@ -109,6 +109,16 @@ wheels = [
 ]
 
 [[package]]
+name = "channels"
+version = "0.4.0"
+source = { directory = "../channels" }
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.2" }]
+
+[[package]]
 name = "click"
 version = "8.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -331,6 +341,7 @@ version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "agent-runtime" },
+    { name = "channels" },
     { name = "mcp", extra = ["cli"] },
     { name = "uvicorn" },
 ]
@@ -345,6 +356,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-runtime", directory = "../agent-runtime" },
+    { name = "channels", directory = "../channels" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },

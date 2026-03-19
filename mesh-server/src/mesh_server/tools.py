@@ -8,12 +8,21 @@ from __future__ import annotations
 
 import time
 import uuid as uuid_mod
+from pathlib import Path
 
+from channels import resolve_channel as channels_resolve
+
+from mesh_server.attachments import (
+    normalize_attachments,
+    resolve_attachment_paths,
+    validate_attachments,
+)
 from mesh_server.events import EventStore
 from mesh_server.projections import MeshState
 from mesh_server.types import (
     BROADCAST_UUID,
     AgentDeregistered,
+    Message,
     MessageDrained,
     MessageEnqueued,
 )
@@ -40,8 +49,17 @@ def tool_send(
     to: str | list[str],
     message: str | None = None,
     command: str | None = None,
+    attachments: list | None = None,
 ) -> dict:
     """Send a message to one or more recipients."""
+    # Validate attachments
+    err = validate_attachments(attachments)
+    if err:
+        return _result("invalid_args", error=err)
+
+    # Normalize: empty list -> None
+    attachments = normalize_attachments(attachments)
+
     # Normalize to a list of recipient UUIDs
     if isinstance(to, str):
         if to == BROADCAST_UUID:
@@ -70,6 +88,7 @@ def tool_send(
             command=command,
             message=message,
             timestamp=time.time(),
+            attachments=attachments,
         )
         store.append(event)
         state.apply(event)
@@ -78,12 +97,36 @@ def tool_send(
     return _result("ok", {"delivered_to": delivered_to})
 
 
+def _format_message(msg: "Message", *, mesh_dir: Path | None = None) -> dict:
+    """Format a Message for tool output, optionally resolving attachment paths."""
+    attachments = msg.attachments
+    if attachments and mesh_dir is not None:
+        attachments = resolve_attachment_paths(
+            attachments,
+            from_uuid=msg.from_uuid,
+            to_uuid=msg.to_uuid,
+            mesh_dir=mesh_dir,
+        )
+    result = {
+        "id": msg.id,
+        "from": msg.from_uuid,
+        "to": msg.to_uuid,
+        "command": msg.command,
+        "message": msg.message,
+        "timestamp": msg.timestamp,
+    }
+    if attachments:
+        result["attachments"] = attachments
+    return result
+
+
 def tool_read_inbox(
     state: MeshState,
     store: EventStore,
     *,
     caller_uuid: str,
     block: bool = False,
+    mesh_dir: Path | None = None,
 ) -> dict:
     """Read and drain inbox (non-blocking version)."""
     messages = state.get_inbox(caller_uuid)
@@ -97,19 +140,7 @@ def tool_read_inbox(
 
     return _result(
         "ok",
-        {
-            "messages": [
-                {
-                    "id": m.id,
-                    "from": m.from_uuid,
-                    "to": m.to_uuid,
-                    "command": m.command,
-                    "message": m.message,
-                    "timestamp": m.timestamp,
-                }
-                for m in messages
-            ]
-        },
+        {"messages": [_format_message(m, mesh_dir=mesh_dir) for m in messages]},
     )
 
 
@@ -119,6 +150,7 @@ async def tool_read_inbox_async(
     *,
     caller_uuid: str,
     block: bool = False,
+    mesh_dir: Path | None = None,
 ) -> dict:
     """Read and drain inbox. If block=True, waits indefinitely for a message."""
     if block:
@@ -132,7 +164,9 @@ async def tool_read_inbox_async(
                 state.clear_waiter(caller_uuid)
 
     # Now drain (whether we waited or not)
-    return tool_read_inbox(state, store, caller_uuid=caller_uuid, block=False)
+    return tool_read_inbox(
+        state, store, caller_uuid=caller_uuid, block=False, mesh_dir=mesh_dir
+    )
 
 
 def tool_show_neighbors(state: MeshState, *, caller_uuid: str) -> dict:
@@ -171,3 +205,20 @@ def tool_shutdown(
     store.append(event)
     state.apply(event)
     return _result("ok")
+
+
+def tool_resolve_channel(
+    *,
+    mesh_dir: Path,
+    caller_uuid: str,
+    participants: list[str],
+) -> dict:
+    """Resolve channel directory for a set of participants."""
+    all_participants = sorted(set([caller_uuid] + participants))
+    if len(all_participants) < 2:
+        return _result("invalid_args", error="Need at least one other participant")
+    try:
+        result = channels_resolve(mesh_dir=mesh_dir, participants=all_participants)
+        return _result("ok", result)
+    except ValueError as e:
+        return _result("invalid_args", error=str(e))
