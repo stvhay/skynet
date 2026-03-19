@@ -89,7 +89,9 @@ jobs:
       - name: Extract version and tag
         id: version
         run: |
-          VERSION=$(echo "${{ github.event.head_commit.message }}" | sed 's/release: //')
+          # Use only first line; strip PR suffix like "(#25)" from squash merges
+          FIRST_LINE=$(echo "${{ github.event.head_commit.message }}" | head -n1)
+          VERSION=$(echo "$FIRST_LINE" | sed 's/release: //; s/ (#[0-9]*)$//')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           TAG="$(date -u +%Y-%m-%dT%H%M%SZ)"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
